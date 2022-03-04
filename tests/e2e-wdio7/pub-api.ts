@@ -225,6 +225,7 @@ type ThingFound = PageOptFields
                 | PageFound
                 | PageListed  // hmm, incl in  PageOptFields  above
                 | PostListed
+                | EventFound
                 | ParticipantFound | TagFound | CategoryFound;
 
 
@@ -330,6 +331,109 @@ interface CategoryFound {
   urlPath: string;
 };
 
+// User  ^^\__.--  Individual?
+// Guest   |
+// Anon  __/
+//
+// UserCreated
+// UserUpdated
+//
+// GuestCreated
+// GuestUpdated (was that possible?)
+//
+// AnonymCreated
+// AnonymUpdated
+//
+// GroupCreated
+// GroupUpdated
+// GroupMembersChanged
+//
+// CircleCreated ?
+// CircleUpdated ?
+//
+// PageCreated
+// PageUpdated
+//
+// PostCreated
+// PostUpdated
+//
+// CategoryCreated
+// CategoryUpdated
+
+// Site.UserJoined
+// Group.Created | .Updated | .Deleted  | .MemberJoined | .MemberLeft
+// User.JoinedGroup | .LeftGroup
+// User.Deactivated | .Deleted
+// Page.Created | .Answered | .Done | .Closed | .Deleted
+// Post.Created | .Edited | .Changed | .Deleted
+
+interface EventDefaultFields__no {
+  eventId: Nr;
+  eventTypes: St[]; // ['Page.Created', 'Post.Created'],
+  eventData: {
+    page?: {   // JsPageFound
+      title: St;
+      urlPath: St;
+      categoriesMainFirst: CategoryFound[]
+      author: UserFound; // JsParticipantFoundOrNull
+    },
+    post?: {
+    }
+  }
+}
+
+type EventType =
+    'PageCreated' | 
+    'PageUpdated' | 
+    'PostCreated' | 
+    'PostUpdated';
+    // ...
+
+interface Event {
+  eventId: Nr;
+  eventType: EventType;
+  eventData: Object;
+}
+
+interface PageCreatedEvent extends Event {
+  eventId: Nr;
+  eventType: 'PageCreated';
+  eventData: {
+    pageIdSt: PageId;
+    pageType: St;
+    authorId: PatId;
+    title: St;
+    postId: Nr;
+    postNr: Nr;
+    body: St;
+    bodyFormat: 'CommonMark';
+    // categor ...
+    /*
+    posts: [{
+      postId: Nr;
+      postNr: Nr;
+      body: St;
+    }, {
+      postId: Nr;
+      postNr: Nr;
+      body: St;
+    }] */
+  }
+}
+
+interface PageUpdatedEvent extends Event {
+  eventId: Nr;
+  eventType: 'PageUpdated';
+  eventData: {
+    pageIdSt: PageId;
+    pageType: St;
+    authorId: PatId;
+    title: St;
+    body: St;
+    bodyFormat: 'CommonMark';
+    // categor ...
+  }
+}
 
 
 // A  Get Query request
@@ -635,6 +739,37 @@ type ListResultsScrollCursor = Unimplemented;
 // Response ex:
 //
 //   { origin: "https://example.com", thingsFound: [...]  }
+//
+//
+// List recent webhook events:
+//
+//  /-/v0/list  {
+//    listQuery: {
+//      listWhat: 'Events',
+//    }
+//  }
+//
+// Response ex:
+//
+// {
+//   origin: "https://example.com",
+//   thingsFound: [{
+//     eventId: __,
+//     eventTypes: ['Page.Created', 'Post.Created'],
+//     eventData: {
+//       page: {   // JsPageFound
+//         title:
+//         urlPath:
+//         categoriesMainFirst: 
+//         author: {
+//           JsParticipantFoundOrNull
+//         }
+//       },
+//       posts: [{
+//       }]
+//     }
+//   }]
+// }
 //
 
 

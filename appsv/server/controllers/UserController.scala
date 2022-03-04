@@ -383,7 +383,9 @@ class UserController @Inject()(cc: ControllerComponents, edContext: TyContext)
       // Later: Include current ip and cookie etc, if starts remembering for each request [6LKKEZW2]
       // (It'd be found in anyStats below, not in the audit log.)
       val auditLogEntries: Seq[AuditLogEntry] =
-        tx.loadAuditLogEntriesRecentFirst(userId, tyype = None, limit = 999, inclForgotten = false)
+        tx.loadAuditLogEntriesRecentFirst(userId = Some(userId), tyype = None,
+              newerOrAt = None, olderOrAt = None, newestFirst = true,
+              limit = 999, inclForgotten = false)
       val uniqueBrowserIdData = auditLogEntries.map(_.browserIdData).distinct
       val browserIdDataJson = uniqueBrowserIdData map { (browserIdData: BrowserIdData) =>
         Json.obj(

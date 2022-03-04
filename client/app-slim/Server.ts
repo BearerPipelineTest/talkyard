@@ -2320,6 +2320,21 @@ export function markCurrentPageAsSeen() {
 }
 
 
+export function listWebhooks(onOk: (webhooks: Webhook[]) => Vo) {
+  get('/-/list-webhooks', onOk);
+}
+
+
+export function upsertWebhook(webhook: Webhook, onOk: (webhook: Webhook) => Vo) {
+  postJsonSuccess('/-/upsert-webhook', onOk, { webhook });
+}
+
+
+export function deleteWebhook(webhook: Webhook, onOk: () => Vo) {
+  postJsonSuccess('/-/delete-webhook', onOk, { webhook });
+}
+
+
 export function listApiSecrets(onOk: (secrets: ApiSecret[]) => void) {
   get('/-/list-api-secrets', onOk);
 }

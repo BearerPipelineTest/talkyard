@@ -784,6 +784,70 @@ class SystemDao(
   }
 
 
+  import play.api.libs.ws._
+  import play.api.libs.json.{JsArray, JsObject, Json}
+  import scala.concurrent.{ExecutionContext, Future, Promise}
+  import scala.concurrent.duration._
+
+  def sendWebhookRequests(): U = {
+    /*
+    val pendingReqs: ImmSeq[PendingWebhookReq] =
+      readTx(_.loadPendingWebhookRequests(11))
+
+    for (task <- pendingReqs) {
+       ...
+      })(globals.executionContext)
+    }
+    */
+
+    sendWebhookRequest("http://localhost:5678/webhook-test/0d28c2c4-18d7-48e9-9786-2e84f036ff15",
+        Json.obj(
+            "eventId" -> 123,
+            "eventType" -> "PageCreated",
+            "eventData" -> Json.obj(
+                "pageIdSt" -> "123abc",
+                "pageType" -> "Idea",
+                "authorId" -> 123,
+                "title" -> "Get another cat",
+                "postId" -> 123,
+                "postNr" -> 1,
+                "body" -> "So we can feed the dogs",
+                "bodyFormat" -> "CommonMark",
+                )))
+  }
+
+  private def sendWebhookRequest(toWhere: St, payloadJson: JsObject): Future[U] = {
+    val wsClient: WSClient = globals.wsClient
+    val jsStr = payloadJson.toString()
+    val request: WSRequest =
+      wsClient.url("http://ty-it-n8n:5678" +
+            "/webhook-test/0d28c2c4-18d7-48e9-9786-2e84f036ff15").withHttpHeaders(
+        play.api.http.HeaderNames.CONTENT_TYPE -> play.api.http.ContentTypes.JSON, //ContentType,
+        //play.api.http.HeaderNames.USER_AGENT -> UserAgent,
+        play.api.http.HeaderNames.CONTENT_LENGTH -> jsStr.length.toString)
+        .withRequestTimeout(10.seconds)
+    request.post(jsStr).map({ response: WSResponse =>
+      try {
+        response.status match {
+          case 200 => logger.info("Got 200 from webhook req")
+          case x =>
+            logger.info(s"Got $x from webhook req")
+        }
+      }
+      catch {
+        case ex: Exception =>
+          logger.warn(s"Got back error after trying to send webhook [TyEPWHK1]", ex)
+          //SpamCheckResult.Error(GoogleSafeBrowsingApiDomain)
+      }
+    })(globals.executionContext)
+      .recover({
+        case ex: Exception =>
+          logger.warn(s"Error sending webhook [TyEPWHK2]", ex)
+          //Sp5KMRD025amCheckResult.Error(GoogleSafeBrowsingApiDomain)
+      })(globals.executionContext)
+  }
+
+
   // ----- Testing
 
   def emptyDatabase(): Unit = {

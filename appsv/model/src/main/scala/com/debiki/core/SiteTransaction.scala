@@ -753,12 +753,18 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
 
   def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], tyype: Opt[AuditLogEntryType],
         newerOrAt: Opt[When], olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
-        inclForgotten: Boolean): immutable.Seq[AuditLogEntry]
+        inclForgotten: Bo): immutable.Seq[AuditLogEntry]
 
   def loadBlocks(ip: String, browserIdCookie: Option[String]): immutable.Seq[Block]
   def insertBlock(block: Block): Unit
   def unblockIp(ip: InetAddress): Unit
   def unblockBrowser(browserIdCookie: String): Unit
+
+  def loadWebhooks(): ImmSeq[Webhook]
+  def upsertWebhook(webhook: Webhook): U
+  def deleteWebhook(webhookId: WebhookId): U
+  def loadWebhooksSent(): ImmSeq[WebhookSent]
+  def upsertWebhookSent(webhookSent: WebhookSent): U
 
   def nextApiSecretNr(): DraftNr
   def insertApiSecret(secret: ApiSecret): Unit

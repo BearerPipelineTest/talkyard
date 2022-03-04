@@ -18,47 +18,122 @@
 package com.debiki.core
 
 
-sealed abstract class EventType
+trait EventType
 
-object EventType {
-  case object PageCreated extends EventType
-  case object PageStatusChange extends EventType
+sealed abstract class Event {
+  def id: EventId
+  def when: When
+  def eventTypes: ImmSeq[EventType]
 }
 
 
-case class Event(
+
+sealed abstract class PageEventType extends EventType
+
+object PageEventType {
+  case object PageCreated extends PageEventType
+
+  case object PageDeleted extends PageEventType
+  case object PageUndeleted extends PageEventType
+
+  case object PageClosed extends PageEventType
+  case object PageReopened extends PageEventType
+
+  case object PageAnswered extends PageEventType
+  //case object PageUnanswered extends PageEventType
+
+  case object PageDone extends PageEventType
+  //case object PageUnplanned extends PageEventType
+}
+
+
+case class PageEvent(
   when: When,
-  eventType: EventType) {
+  eventTypes: ImmSeq[PageEventType],
+  underlying: AuditLogEntry) extends Event {
 
+  def id: EventId = underlying.id
 }
+
+
+
+sealed abstract class PostEventType extends EventType
+
+object PostEventType {
+  case object PostCreated extends PostEventType
+  case object PostEdited extends PostEventType
+
+  // If it's a reply, not an Orig Post.
+  case object CommentCreated extends PostEventType
+}
+
+
+case class PostEvent(
+  when: When,
+  eventTypes: ImmSeq[PostEventType],
+  underlying: AuditLogEntry) extends Event {
+
+  def id: EventId = underlying.id
+}
+
+
 
 object Event {
-  def fromAuditLogItem(aIt: AuditLogEntry): Opt[Event] = {
-    val when = When.fromDate(aIt.doneAt)
 
-    val event = aIt.didWhat match {
-      case AuditLogEntryType.NewChatMessage => ???
-      case AuditLogEntryType.NewReply => ???
-      case AuditLogEntryType.NewPage =>
-        Event(when = when, eventType = EventType.PageCreated)
+  /** One log line can affect many pages (e.g. moving a comment from one to another)
+    * so, returns a list of events.
+    */
+  def fromAuditLogItem(logEntry: AuditLogEntry): ImmSeq[Event] = {
+    val when = When.fromDate(logEntry.doneAt)
 
-      case AuditLogEntryType.PageAnswered => ???
-      case AuditLogEntryType.PagePlanned => ???
-      case AuditLogEntryType.PageStarted => ???
-      case AuditLogEntryType.PageDone => ???
-
-      case AuditLogEntryType.PageClosed => ???
-      case AuditLogEntryType.PageOpened => ???
-
-      case AuditLogEntryType.DeletePage => ???
-      case AuditLogEntryType.UndeletePage => ???
-
-      case AuditLogEntryType.EditPost => ???
-
+    val postEventTypes: Vec[PostEventType] = logEntry.didWhat match {
+      case AuditLogEntryType.NewChatMessage | AuditLogEntryType.NewReply =>
+        Vec(PostEventType.PostCreated, PostEventType.CommentCreated)
+      case AuditLogEntryType.EditPost =>
+        Vec(PostEventType.PostEdited)
       case _ =>
-        return None
+        Vec()
     }
 
-    Some(event)
+    val PET = PageEventType
+
+    val pageEventTypes: Vec[PageEventType] = logEntry.didWhat match {
+      case AuditLogEntryType.NewPage =>
+        Vec(PET.PageCreated)
+
+      case AuditLogEntryType.PageAnswered =>
+        Vec(PET.PageClosed, PET.PageAnswered)
+
+      //case AuditLogEntryType.PagePlanned =>
+      //case AuditLogEntryType.PageStarted => ???
+
+      case AuditLogEntryType.PageDone =>
+        Vec(PET.PageClosed, PET.PageDone)
+
+      case AuditLogEntryType.PageClosed =>
+        Vec(PET.PageClosed)
+      case AuditLogEntryType.PageOpened =>
+        Vec(PET.PageReopened)
+
+      case AuditLogEntryType.DeletePage =>
+        Vec(PET.PageDeleted)
+      case AuditLogEntryType.UndeletePage =>
+        Vec(PET.PageUndeleted)
+
+      case _ =>
+        Vec()
+    }
+
+    val resultBuilder = Vec.newBuilder[Event]
+
+    if (postEventTypes.nonEmpty) {
+      resultBuilder += PostEvent(when = when, postEventTypes, logEntry)
+    }
+
+    if (pageEventTypes.nonEmpty) {
+      resultBuilder += PageEvent(when = when, pageEventTypes, logEntry)
+    }
+
+    resultBuilder.result
   }
 }

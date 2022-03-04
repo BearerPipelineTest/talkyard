@@ -66,19 +66,19 @@ export const ApiPanel = createFactory({
 
     const store: Store = this.props.store;
 
-    let elems = this.state.secrets.map((apiSecret: ApiSecret, index: number) => {
-      return ApiSecretItem({ index, apiSecret, deleteSecret: this.deleteSecret });
+    let elems = this.state.secrets.map((apiSecret: ApiSecret, index: Nr) => {
+      return ApiSecretItem({ key: index, apiSecret, deleteSecret: this.deleteSecret });
     });
 
     const elemsList = elems.length
         ? r.table({ className: 's_A_Api_SecrT' },
-            r.thead({},
+            r.thead({}, r.tr({},
               r.th({}, "Nr"),
               r.th({}, "For user"),
               r.th({}, "Created"),
               r.th({}, "Deleted"),
               r.th({}, "Capabilities"),
-              r.th({}, "Value and actions")),
+              r.th({}, "Value and actions"))),
             r.tbody({},
               elems))
         : r.p({ className: 'e_NoApiSecrets' }, "No API secrets.");
@@ -89,6 +89,7 @@ export const ApiPanel = createFactory({
 
     return (
       r.div({ className: 's_A_Api' },
+        WebhooksApiPanel(),
         r.h3({}, "API Secrets"),
         r.p({}, "Recent first."),
         elemsList,
@@ -137,7 +138,7 @@ const ApiSecretItem = createComponent({
     const clazz = 's_ApiSecr';
     const clazzActiveOrDeleted = clazz + (secret.isDeleted ? '-Dd' : '-Active');
 
-    return r.tr({ key: this.props.index, className: clazz + ' ' + clazzActiveOrDeleted },
+    return r.tr({ className: clazz + ' ' + clazzActiveOrDeleted },
       r.td({}, secret.nr),
       r.td({}, "Any"),  // currently may call API using any user id
       r.td({}, timeExact(secret.createdAt)),
@@ -147,6 +148,80 @@ const ApiSecretItem = createComponent({
   }
 });
 
+
+
+interface WebhooksApiPanelProps {
+}
+
+interface Webhook {
+  sendToUrl?: St;
+  enabled?: Bo;
+}
+
+const WebhooksApiPanel = React.createFactory<WebhooksApiPanelProps>(function(props) {
+  const [webhooksBef, setWebhooksBef] = React.useState<Webhook[] | N>(null);
+  const [webhooksCur, setWebhooksCur] = React.useState<Webhook[] | N>(null);
+
+  React.useEffect(() => {
+    Server.listWebhooks(whks => {
+      // If there's not yet any webhook, let's make a new one: {}, which the admin
+      // can edit and save.
+      const whks2 = whks.length ? whks : [{ id: 1 }];
+      setWebhooksBef(whks2);
+      setWebhooksCur(whks2);
+    });
+  }, []);
+
+  /*
+  const [url, setUrl] = React.useState({}); // <ValueOk<St>>('');
+  const [enabled, setEnabled] = React.useState<Bo>(false);
+  */
+
+  if (webhooksCur === null)
+    return r.p({}, "Loading webhooks ...");
+
+  const theCurHook = webhooksCur[0];
+
+  function updWebhook(changes: Partial<Webhook>) {
+    const curHook = webhooksCur[0];
+    const updatedHook = {...curHook, ...changes };
+    setWebhooksCur([updatedHook]);   // currently there can be just one webhook
+  }
+
+  const urlElm =
+      Input({ label: "URL",
+          wrapperClassName: 'col-xs-offset-2 col-xs-10',
+          className: 'e_WbhkUrl',
+          onChange: (event) => {
+              updWebhook({ sendToUrl: event.target.value });
+            }
+          });
+
+  const enabledElm =
+      Input({ type: 'checkbox', label: "Enabled",
+          wrapperClassName: 'col-xs-offset-2 col-xs-10',
+          className: 'e_SearchFld',
+          checked: theCurHook.enabled,
+          onChange: () => {
+            updWebhook({ enabled: !theCurHook.enabled });
+          },
+          });
+
+  const saveBtn =
+      Button({
+          //disabled = _.deep
+          onClick: () => {
+            Server.upsertWebhook(webhooksCur, () => {});
+          }, }, "Save");
+
+  return rFr({},
+      r.h3({}, "Webhooks"),
+      r.p({}, "Currently you can configure one webhook endpoint."),
+      urlElm,
+      enabledElm,
+      saveBtn,
+      );
+});
 
 
 //------------------------------------------------------------------------------

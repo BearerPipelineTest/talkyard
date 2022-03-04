@@ -62,6 +62,7 @@ class RdbSiteTransaction(var siteId: SiteId, val daoFactory: RdbDaoFactory, val 
   with BlocksSiteDaoMixin
   with ReviewTasksSiteDaoMixin
   with PermsOnPagesRdbMixin
+  with WebhooksRdbMixin
   with ApiSecretsSiteDaoMixin
   with AuditLogSiteDaoMixin {
 

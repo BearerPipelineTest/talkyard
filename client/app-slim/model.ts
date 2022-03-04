@@ -1952,6 +1952,33 @@ interface Host {
 }
 
 
+type WebhookId = Nr;
+type EventId = Nr;
+type EventType = St;
+
+interface Webhook {
+  webhookId: WebhookId,
+
+  ownerId?: PatId;
+  runAsId?: PatId;
+
+  enabled?: Bo,
+  broken?: Bo,
+  deleted?: Bo,
+
+  descr?: St;
+  sendToUrl?: St,
+  sendEventTypes?: EventType[];
+  sendFormatV?: 1;
+  sendMaxPerSec?: Nr;
+
+  sentUpToWhen?: WhenMs,
+  sentUpToEventId?: EventId;
+  maybePendingMin?: Nr;
+  retryEventIds?: EventId[];
+}
+
+
 interface ApiSecret {
   nr: ApiSecretNr;
   userId?: UserId;
@@ -2129,6 +2156,47 @@ interface TipsBoxProps {
   showUnhideTips?: Bo;
   className?: St;
   large?: Bo;
+}
+
+
+interface InputProps {
+  id?: St;
+  ref?;
+  type?: 'text' | 'textarea' | 'number' | 'checkbox' | 'radio' | 'select' | 'custom';
+  name?: St;
+  bsClass?: St;
+  className?: St;
+  wrapperClassName?: St;
+  disabled?: Bo;
+  inputRef?;
+  onChange?;
+  onFocus?;
+  onBlur?;
+  tabIndex?: Nr;
+
+  // Checkboxes and radio buttons:
+  inline?: Bo;
+  title?: Bo;
+  label?: St;
+  validationState?;
+  checked?: Bo;
+  defaultChecked?: Bo;
+
+  labelFirst?: Bo;
+
+  // Custom.
+  labelClassName?: St;
+
+  // Text and other inputs
+  bsSize?;
+  placeholder?: St;
+  value?;
+  defaultValue?;
+
+  addonBefore?;
+  help?: St | RElm;
+
+  children?;
 }
 
 

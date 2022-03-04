@@ -206,7 +206,7 @@ object ThingsFoundJson {  RENAME // to  PagesFoundJson ?
     val pp = anyPp getOrElse { return JsNull }
     JsStringOrNull(pp.tinyAvatar.map(_.hashPath))
     Json.obj(
-      "ppId" -> JsNumber(pp.id),
+      "ppId" -> JsNumber(pp.id),  // RENAME to patId  [ty_v1], make backw compat
       "username" -> JsStringOrNull(pp.anyUsername),
       "fullName" -> JsStringOrNull(pp.anyName),
       "tinyAvatarUrl" -> JsStringOrNull(

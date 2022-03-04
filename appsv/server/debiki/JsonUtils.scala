@@ -354,6 +354,25 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
   }
 
 
+  def parseInt16(json: JsValue, field: St, alt: St = "", default: Opt[i16] = None,
+        min: Opt[i16] = None, max: Opt[i16] = None): i16 =
+    parseOptInt16(json, field, alt, min = min, max = max).orElse(default) getOrElse {
+      throwMissing("TyE06MWET", field)
+    }
+
+
+  def parseOptInt16(json: JsValue, fieldName: St, altName: St = "",
+          min: Opt[i16] = None, max: Opt[i16] = None): Opt[i16] = {
+    val firstFieldValue = readOptLong(json, fieldName)
+    firstFieldValue.orElse(readOptLong(json, altName)) map { valueAsLong =>
+      val usedName = if (firstFieldValue.isDefined) fieldName else altName
+      val theMin = Some(math.max(Short.MinValue.toInt, (min getOrElse Short.MinValue).toInt))
+      val theMax = Some(math.min(Short.MaxValue.toInt, (max getOrElse Short.MaxValue).toInt))
+      int64To32ThrowIfOutOfRange(valueAsLong, usedName, min = theMin, max = theMax).toShort
+    }
+  }
+
+
   def parseInt32(json: JsValue, field: St, alt: St = "", default: Opt[i32] = None,
         min: Opt[i32] = None, max: Opt[i32] = None): i32 =
     readInt(json, fieldName = field, altName = alt, default = default,
@@ -446,17 +465,17 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
     }
 
   def parseWhen(json: JsValue, fieldName: String): When =
-    readWhen((json, fieldName)
+    readWhen(json, fieldName)
 
   def readWhen(json: JsValue, fieldName: String): When =
-    When.fromDate(readDateMs(json, fieldName: String))
+    When.fromDate(readDateMs(json, fieldName))
 
 
   def readWhenDay(json: JsValue, fieldName: String): WhenDay =
-    WhenDay.fromDate(readDateMs(json, fieldName: String))
+    WhenDay.fromDate(readDateMs(json, fieldName))
 
   def parseOptWhen(json: JsValue, fieldName: String): Option[When] =
-    readOptWhen((json, fieldName)
+    readOptWhen(json, fieldName)
 
   def readOptWhen(json: JsValue, fieldName: String): Option[When] =
     readOptDateMs(json, fieldName).map(When.fromDate)

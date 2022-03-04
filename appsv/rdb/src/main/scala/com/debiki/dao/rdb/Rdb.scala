@@ -232,6 +232,13 @@ object Rdb {
     else Some(value)
   }
 
+  def getInt16(rs: js.ResultSet, column: St): i16 = {
+    val res = getInt32(rs, column)
+    dieIf(res > Short.MaxValue, "yE205MPLJ01", res)
+    dieIf(res < Short.MinValue, "yE205MP5L01", res)
+    res.toShort
+  }
+
   def getInt(rs: js.ResultSet, column: String): Int =
     getInt32(rs, column)
 
@@ -249,6 +256,13 @@ object Rdb {
 
   def getOptInt(rs: js.ResultSet, column: String): Option[Int] =
     getOptInt32(rs, column)
+
+  def getOptInt16(rs: js.ResultSet, column: St): Opt[i16] =
+    getOptInt32(rs, column) map { res =>
+      dieIf(res > Short.MaxValue, "yE205MPLJ02", res)
+      dieIf(res < Short.MinValue, "yE205MP5L02", res)
+      res.toShort
+    }
 
   def getOptInt32(rs: js.ResultSet, column: St): Opt[i32] =
     getResultSetIntOption(rs, column: St)
@@ -352,6 +366,13 @@ object Rdb {
     if (sqlArray eq null) return None
     val javaArray = sqlArray.getArray.asInstanceOf[Array[String]]
     Some(javaArray.to[Vector])
+  }
+
+  def getOptArrayOfInt32(rs: js.ResultSet, column: St): Opt[ImmSeq[i32]] = {
+    val sqlArray: js.Array = rs.getArray(column)
+    if (sqlArray eq null) return None
+    val javaArray = sqlArray.getArray.asInstanceOf[Array[i32]]
+    Some(javaArray.to[Vec])
   }
 
   def isUniqueConstrViolation(sqlException: js.SQLException): Boolean = {

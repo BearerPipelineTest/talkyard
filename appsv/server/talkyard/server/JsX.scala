@@ -799,6 +799,9 @@ object JsX {   RENAME // to JsonPaSe
   def JsBoolOrNull(value: Option[Boolean]): JsValue =
     value.map(JsBoolean).getOrElse(JsNull)
 
+  def JsNum16OrNull(value: Opt[i16]): JsValue =
+    JsNumberOrNull(value.map(_.toInt))
+
   def JsNum32OrNull(value: Opt[i32]): JsValue =
     JsNumberOrNull(value)
 

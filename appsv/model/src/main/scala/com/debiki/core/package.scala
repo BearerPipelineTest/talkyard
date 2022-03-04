@@ -439,6 +439,9 @@ package object core {
   type EmailOut = Email  // renaming from Email to EmailOut
 
   type AuditLogEntryId = Int
+  type EventId = AuditLogEntryId // for now. Later: [Scala_3] opaque type
+
+  type WebhookId = i32
 
   type ApiSecretNr = Int
 
