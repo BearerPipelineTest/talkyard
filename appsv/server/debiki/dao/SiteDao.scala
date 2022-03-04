@@ -147,7 +147,8 @@ class SiteDao(
   with ReviewsDao
   with SummaryEmailsDao
   with FeedsDao
-  with AuditDao {
+  with AuditDao
+  with talkyard.server.webhooks.WebhooksSiteDaoMixin {
 
   import SiteDao._
 

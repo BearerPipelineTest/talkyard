@@ -23,7 +23,7 @@ import Rdb._
 import RdbUtil._
 import java.sql.{ResultSet => j_ResultSet, SQLException => j_SQLException}
 import collection.{mutable => mut}
-
+import WebhooksRdb._
 
 
 /** Manages user sessions. But why are sessions stored in Postgres, not Redis?
@@ -192,10 +192,13 @@ trait WebhooksRdbMixin extends SiteTx {
 
     runUpdateSingleRow(statement, values)
   }
+}
 
 
+object WebhooksRdb {
 
-  private def parseWebhook(rs: j_ResultSet): Webhook = {
+
+  def parseWebhook(rs: j_ResultSet): Webhook = {
     Webhook(
           webhookId = getInt32(rs, "webhook_id_c"),
 
@@ -219,8 +222,7 @@ trait WebhooksRdbMixin extends SiteTx {
   }
 
 
-
-  private def parseWebhookSent(rs: j_ResultSet): WebhookSent = {
+  def parseWebhookSent(rs: j_ResultSet): WebhookSent = {
     WebhookSent(
           webhookId = getInt32(rs, "webhook_id_c"),
           eventId = getInt32(rs, "event_id_c"),

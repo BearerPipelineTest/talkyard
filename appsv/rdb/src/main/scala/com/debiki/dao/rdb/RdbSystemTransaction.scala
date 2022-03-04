@@ -1001,6 +1001,20 @@ class RdbSystemTransaction(
   }
 
 
+  def loadPendingWebhooks(): Map[SiteId, ImmSeq[Webhook]] = {
+    import com.debiki.dao.rdb.WebhooksRdb.parseWebhook
+    val query = """
+          select * from webhooks_t
+          where done_for_now_c is not true
+          order by site_id_c asc"""
+    runQueryBuildMultiMap(query, List(), rs => {
+      val siteId = rs.getInt("site_id_c")
+      val webhook = parseWebhook(rs)
+      siteId -> webhook
+    })
+  }
+
+
   /** Finds all evolution scripts below src/main/resources/db/migration and applies them.
     */
   def applyEvolutions() {

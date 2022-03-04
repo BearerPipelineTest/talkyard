@@ -800,6 +800,16 @@ class SystemDao(
     }
     */
 
+    val pendingWebhooksBySiteId: Map[SiteId, ImmSeq[Webhook]] = readTx { tx =>
+      tx.loadPendingWebhooks()
+    }
+
+    for ((siteId, webhooks) <- pendingWebhooksBySiteId) {
+      val siteDao = globals.siteDao(siteId)
+      siteDao.sendPendingWebhookReqs(webhooks)
+    }
+
+    /*
     sendWebhookRequest("http://localhost:5678/webhook-test/0d28c2c4-18d7-48e9-9786-2e84f036ff15",
         Json.obj(
             "eventId" -> 123,
@@ -814,6 +824,7 @@ class SystemDao(
                 "body" -> "So we can feed the dogs",
                 "bodyFormat" -> "CommonMark",
                 )))
+          */
   }
 
   private def sendWebhookRequest(toWhere: St, payloadJson: JsObject): Future[U] = {

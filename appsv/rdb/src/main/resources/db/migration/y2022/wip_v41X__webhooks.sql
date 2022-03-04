@@ -74,7 +74,8 @@ create table webhooks_t (
 
   sent_up_to_when_c  timestamp,
   sent_up_to_event_id_c  event_id_d,
-  maybe_pending_min_c  i16_gz_d not null,
+  --maybe_pending_min_c  i16_gz_d not null,
+  done_for_now_c  bool,
   retry_event_ids_c  int[], -- not?: event_id_d[],
 
   constraint webhooks_p_id primary key (site_id_c, webhook_id_c),

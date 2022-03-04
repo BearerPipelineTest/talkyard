@@ -748,7 +748,8 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
         : Seq[AuditLogEntry]
 
   // For now. Later, own table?
-  def loadEventsFromAuditLog(newerOrAt: Opt[When], olderOrAt: Opt[When], limit: i32)
+  def loadEventsFromAuditLog(limit: i32, newerOrAt: Opt[When] = None,
+        newerThanEventId: Opt[EventId] = None, olderOrAt: Opt[When] = None)
         : immutable.Seq[AuditLogEntry]
 
   def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], tyype: Opt[AuditLogEntryType],

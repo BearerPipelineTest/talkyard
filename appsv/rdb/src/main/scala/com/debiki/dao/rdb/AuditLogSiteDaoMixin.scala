@@ -142,8 +142,10 @@ trait AuditLogSiteDaoMixin extends SiteTransaction {
   }
 
 
-  def loadEventsFromAuditLog(newerOrAt: Opt[When], olderOrAt: Opt[When], limit: i32)
+  def loadEventsFromAuditLog(limit: i32, newerOrAt: Opt[When] = None,
+        newerThanEventId: Opt[EventId] = None, olderOrAt: Opt[When] = None)
         : immutable.Seq[AuditLogEntry] = {
+        //newerThanEventId !!
     loadAuditLogEntriesRecentFirst(userId = None, tyype = None,
           newerOrAt = newerOrAt, olderOrAt = olderOrAt, newestFirst = false,
           limit = limit, inclForgotten = true)
