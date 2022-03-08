@@ -23,6 +23,7 @@ import debiki.EdHttp.urlDecodeCookie
 import debiki.dao.{MemCacheKey, MemCacheValueIgnoreVersion, SiteDao}
 import talkyard.server.dao.StaleStuff
 import talkyard.server.parser
+import talkyard.server.parser.EventAndJson
 
 import org.apache.commons.codec.{binary => acb}
 import play.api.libs.ws._
@@ -47,18 +48,20 @@ trait WebhooksSiteDaoMixin {
   }
 
   def sendReqsForOneWebhook(webhook: Webhook): U = {
-    val events: Seq[Event] = readTx { tx =>
+    val events: ImmSeq[Event] = readTx { tx =>
       // Maybe break out to own fn?  Dao.loadEvents()?  [load_events_fn]
       val logEntries = tx.loadEventsFromAuditLog(newerOrAt = Some(webhook.sentUpToWhen),
-            newerThanEventId = webhook.sentUpToEventId, limit = 1)
+            newerThanEventId = webhook.sentUpToEventId, limit = webhook.sendBatchSize)
       logEntries.flatMap(Event.fromAuditLogItem)
     }
 
-    val reqsToSend = prepareWebhookRequest(webhook, events)
-
-    reqsToSend foreach { reqToSend =>
-      sendWebhookRequest(reqToSend)
+    val reqToSend = prepareWebhookRequest(webhook, events) getOrIfBad { problem =>
+      val webhookAfter = webhook.copy(brokenReason = Some(problem))(IfBadDie)
+      upsertWebhook(webhookAfter)
+      return
     }
+
+    sendWebhookRequest(reqToSend)
 
     // The event ids should be sequential — remember the highest sent.
     val latestByTime = events.maxBy(_.when.millis)
@@ -78,7 +81,7 @@ trait WebhooksSiteDaoMixin {
 
 
   private def prepareWebhookRequest(webhook: Webhook, events: ImmSeq[Event])
-        : ImmSeq[WebhookSent] Or ErrMsg = {
+        : WebhookSent Or ErrMsg = {
     val runAsUser = webhook.runAsId match {
       case None =>
         // Hmm. Maybe None should mean "run as a stranger" ?
@@ -98,30 +101,33 @@ trait WebhooksSiteDaoMixin {
           siteIdsOrigins.uploadsOrigin +
            talkyard.server.UploadsUrlBasePath + siteIdsOrigins.pubId + '/'
 
-    val eventsJson = talkyard.server.parser.EventsParSer.makeEventsListJson(
+    val eventsJson: ImmSeq[EventAndJson] = talkyard.server.parser.EventsParSer.makeEventsListJson(
           events, dao = this, reqer = runAsUser, avatarUrlPrefix)
 
-    // But need both event id, and json!
-    eventsJson map WebhookSent(
-          webhookId = webhook.webhookId,
-          eventId = event.id,
-          attemptNr = 1,
+    val webhookSent = eventsJson map { (evJson: EventAndJson) =>
+      WebhookSent(
+            webhookId = webhook.webhookId,
+            eventId = evJson.event.id,
+            attemptNr = 1,
 
-          sentToUrl = webhook.sendToUrl,
-          sentAt = now(),
-          sentTypes = Nil, // hmm  ImmSeq[EventType],
-          sentByAppVer = generatedcode.BuildInfo.dockerTag,  // or  .version?
-          sentFormatV = 1,
-          sentJson = json,
-          sentHeaders = JsEmptyObj2,
+            sentToUrl = webhook.sendToUrl,
+            sentAt = now(),
+            sentTypes = Nil, // hmm  ImmSeq[EventType],
+            sentByAppVer = generatedcode.BuildInfo.dockerTag,  // or  .version?
+            sentFormatV = 1,
+            sentJson = evJson.json,
+            sentHeaders = JsEmptyObj2,
 
-          // We don't know, yet:
-          sendFailedAt = None,
-          sendFailedHow = None,
-          sendFailedMsg = None,
-          respAt = None,
-          respStatus = None,
-          respBody = None)
+            // We don't know, yet:
+            sendFailedAt = None,
+            sendFailedHow = None,
+            sendFailedMsg = None,
+            respAt = None,
+            respStatus = None,
+            respBody = None)
+    }
+
+    Good(webhookSent)
   }
 
 

@@ -28,13 +28,14 @@ case class Webhook(
   runAsId:  Opt[PatId],  // only sends events about things that run_as_id_c can see
 
   enabled: Bo,
-  broken: Bo,
+  brokenReason: Opt[St],
   deleted: Bo,
   descr: Opt[St],
   sendToUrl: St,
   sendEventTypes: Set[i32],
   sendFormatV: i16,
   sendMaxPerSec: Opt[i16],
+  sendBatchSize: i16,
 
   sentUpToWhen: When,
   sentUpToEventId: Opt[i32],

@@ -171,7 +171,7 @@ class ListController @Inject()(cc: ControllerComponents, edContext: TyContext)
         // Typescript: SearchQueryResults, and ListQueryResults
         controllers.Utils.OkApiJson(Json.obj(
             "origin" -> siteIdsOrigins.siteOrigin,
-            "thingsFound" -> eventsJson), pretty)
+            "thingsFound" -> eventsJson.map(_.json)), pretty)
 
       case Pages =>
         val pageQuery = PageQuery(pageSortOrder,

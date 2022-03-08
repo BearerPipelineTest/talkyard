@@ -6,6 +6,7 @@ import debiki.dao.{LoadPostsResult, PageStuff, SiteDao}
 
 import play.api.libs.json._
 
+case class EventAndJson(event: Event, json: JsObject)
 
 // MOVE to pkg events?
 object EventsParSer {
@@ -13,7 +14,7 @@ object EventsParSer {
 
 
   def makeEventsListJson(events: ImmSeq[Event], dao: SiteDao, reqer: Opt[Pat],
-          avatarUrlPrefix: St): ImmSeq[JsObject] = {
+          avatarUrlPrefix: St): ImmSeq[EventAndJson] = {
 
     val (postsById: Map[PostId, Post],
           origPostsByPageId: Map[PageId, Post],
@@ -90,24 +91,33 @@ object EventsParSer {
           post: Post <- origPostsByPageId.get(pageEvent.pageId)
           cat: Opt[Cat] = page.categoryId flatMap catsById.get
         }
-        yield JsPageEvent_apiv0(pageEvent, page, cat, origPost = Some(post),
+        yield {
+          val json = JsPageEvent_apiv0(pageEvent, page, cat, origPost = Some(post),
                 pagePathsById, authorsById, avatarUrlPrefix = avatarUrlPrefix)
+          EventAndJson(pageEvent, json)
+        }
 
       case pageEvent: PageEvent if pageEvent.eventType == PageEventType.PageUpdated =>
         for {
           page: PageStuff <- pagesById.get(pageEvent.pageId)
           cat: Opt[Cat] = page.categoryId flatMap catsById.get
         }
-        yield JsPageEvent_apiv0(pageEvent, page, cat, origPost = None,
+        yield {
+          val json = JsPageEvent_apiv0(pageEvent, page, cat, origPost = None,
                 pagePathsById, authorsById, avatarUrlPrefix = avatarUrlPrefix)
+          EventAndJson(pageEvent, json)
+        }
 
       case postEvent: PostEvent =>
         for {
           post: Post <- postsById.get(postEvent.postId)
           page: PageStuff <- pagesById.get(post.pageId)
         }
-        yield JsPostEvent_apiv0(postEvent, post, page, authorsById,
+        yield {
+          val json = JsPostEvent_apiv0(postEvent, post, page, authorsById,
                 avatarUrlPrefix = avatarUrlPrefix)
+          EventAndJson(postEvent, json)
+        }
     }
 
     eventsJson
