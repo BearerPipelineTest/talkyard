@@ -126,6 +126,7 @@ class Globals(  // RENAME to TyApp? or AppContext? TyAppContext? variable name =
 
   val e2eTestCounters = new E2eTestCounters
 
+  REMOVE // avoid implicit things! Just makes the code harder to understand
   private implicit def execCtc: ExecutionContext = executionContext
 
   val conf: p.Configuration = appLoaderContext.initialConfiguration

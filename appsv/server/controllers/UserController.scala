@@ -384,7 +384,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: TyContext)
       // (It'd be found in anyStats below, not in the audit log.)
       val auditLogEntries: Seq[AuditLogEntry] =
         tx.loadAuditLogEntriesRecentFirst(userId = Some(userId), tyype = None,
-              newerOrAt = None, olderOrAt = None, newestFirst = true,
+              newerOrAt = None, newerThanEventId = None, olderOrAt = None, newestFirst = true,
               limit = 999, inclForgotten = false)
       val uniqueBrowserIdData = auditLogEntries.map(_.browserIdData).distinct
       val browserIdDataJson = uniqueBrowserIdData map { (browserIdData: BrowserIdData) =>
@@ -1039,6 +1039,17 @@ class UserController @Inject()(cc: ControllerComponents, edContext: TyContext)
       }
 
     res
+  }
+
+
+  def apiv0_showApiSecretInfo: Action[U] = ApiSecretGetJsonAction(RateLimits.ReadsFromCache) {
+        req: GetRequest =>
+    // For now, only sysbot can do API requests, and sysbot can do anything.
+    OkApiJson(Json.obj(
+      "apiSecretInfo" -> Json.obj(
+        "user" -> JsUserApiV0(req.theMember, brief = true),
+        "capabilities" -> Json.arr("DoAnything", "SeeAnything"))))
+        // Later: Created at, expires at
   }
 
 

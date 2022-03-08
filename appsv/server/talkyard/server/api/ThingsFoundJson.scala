@@ -132,7 +132,7 @@ object ThingsFoundJson {  RENAME // to  PagesFoundJson ?
 
 
   // Things needed by JsPageFound().
-  private class PageFoundStuff(
+  class PageFoundStuff(
     val pagePath: PagePathWithId,
     val pageStuff: PageStuff,
     val pageAndSearchHits: Option[PageAndHits]) {

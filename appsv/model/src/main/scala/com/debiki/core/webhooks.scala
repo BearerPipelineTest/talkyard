@@ -59,11 +59,29 @@ case class WebhookSent(
   sentHeaders: JsObject,
 
   sendFailedAt: Opt[When],
-  sendFailedType: Opt[i32],
+  sendFailedHow: Opt[SendFailedHow],
   sendFailedMsg: Opt[St],
 
   respAt: Opt[When],
   respStatus: Opt[i32],
   respBody: Opt[St],
 ) {
+}
+
+
+
+sealed abstract class SendFailedHow(val IntVal: i32) { def toInt: i32 = IntVal }
+
+object SendFailedHow {
+  case object CouldntSend extends SendFailedHow(1)
+  case object ErrorResponseStatusCode extends SendFailedHow(2)
+  case object BugInResponseHandler extends SendFailedHow(3)
+
+  def fromOptInt(value: Opt[i32]): Opt[SendFailedHow] = value map {
+    case CouldntSend.IntVal => CouldntSend
+    case ErrorResponseStatusCode.IntVal => ErrorResponseStatusCode
+    case BugInResponseHandler.IntVal => BugInResponseHandler
+    case _ => return None
+  }
+
 }

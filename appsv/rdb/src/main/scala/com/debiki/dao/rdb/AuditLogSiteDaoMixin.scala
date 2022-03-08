@@ -145,22 +145,23 @@ trait AuditLogSiteDaoMixin extends SiteTransaction {
   def loadEventsFromAuditLog(limit: i32, newerOrAt: Opt[When] = None,
         newerThanEventId: Opt[EventId] = None, olderOrAt: Opt[When] = None)
         : immutable.Seq[AuditLogEntry] = {
-        //newerThanEventId !!
     loadAuditLogEntriesRecentFirst(userId = None, tyype = None,
-          newerOrAt = newerOrAt, olderOrAt = olderOrAt, newestFirst = false,
+          newerOrAt = newerOrAt, newerThanEventId = newerThanEventId,
+          olderOrAt = olderOrAt, newestFirst = false,
           limit = limit, inclForgotten = true)
   }
 
 
   def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], tyype: Opt[AuditLogEntryType],
-        newerOrAt: Opt[When], olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
+        newerOrAt: Opt[When], newerThanEventId: Opt[EventId],
+        olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
         inclForgotten: Bo): immutable.Seq[AuditLogEntry] = {
     tyype foreach { t =>
       dieIf(t == AuditLogEntryType.NewPage, "EdE4WK023X", "Probably wants NewReply too")
       dieIf(t == AuditLogEntryType.NewReply, "EdE3ZCM238", "Probably wants NewPage too")
     }
 
-    val values = ArrayBuffer(siteId.asAnyRef, userId.asAnyRef)
+    val values = ArrayBuffer(siteId.asAnyRef)
 
     val andDoerIdIs = userId match {
       case None => ""
@@ -188,6 +189,13 @@ trait AuditLogSiteDaoMixin extends SiteTransaction {
         "and done_at >= ?"
     }
 
+    val andIdAbove = newerThanEventId match {
+      case None => ""
+      case Some(id) =>
+        values.append(id.asAnyRef)
+        "and audit_id > ?"
+    }
+
     val andOlderOrAt = olderOrAt match {
       case None => ""
       case Some(when) =>
@@ -202,6 +210,7 @@ trait AuditLogSiteDaoMixin extends SiteTransaction {
       $andDidWhatEqType
       $andSkipForgotten
       $andNewerOrAt
+      $andIdAbove
       $andOlderOrAt
       order by done_at $descOrAsc limit $limit
       """

@@ -225,7 +225,7 @@ type ThingFound = PageOptFields
                 | PageFound
                 | PageListed  // hmm, incl in  PageOptFields  above
                 | PostListed
-                | EventFound
+            //  | Event
                 | ParticipantFound | TagFound | CategoryFound;
 
 
@@ -376,8 +376,11 @@ interface EventDefaultFields__no {
       urlPath: St;
       categoriesMainFirst: CategoryFound[]
       author: UserFound; // JsParticipantFoundOrNull
-    },
-    post?: {
+      postsByNr: {
+        '1': {
+          // orig post
+        }
+      }
     }
   }
 }
@@ -390,48 +393,54 @@ type EventType =
     // ...
 
 interface Event {
-  eventId: Nr;
+  //tt: ThingType.Event;
+  id: Nr;
   eventType: EventType;
   eventData: Object;
 }
 
 interface PageCreatedEvent extends Event {
-  eventId: Nr;
-  eventType: 'PageCreated';
-  eventData: {
-    pageIdSt: PageId;
-    pageType: St;
-    authorId: PatId;
-    title: St;
-    postId: Nr;
-    postNr: Nr;
-    body: St;
-    bodyFormat: 'CommonMark';
-    // categor ...
-    /*
-    posts: [{
+  //
+  id: Nr;
+  type: 'PageCreated';
+  data: {
+    page: {
+      pageIdSt: PageId;
+      pageType: St;
+      authorId: PatId;
+      title: St;
       postId: Nr;
       postNr: Nr;
       body: St;
-    }, {
-      postId: Nr;
-      postNr: Nr;
-      body: St;
-    }] */
+      bodyFormat: 'CommonMark';
+      // categor ...
+      /*
+      posts: [{
+        postId: Nr;
+        postNr: Nr;
+        body: St;
+      }, {
+        postId: Nr;
+        postNr: Nr;
+        body: St;
+      }] */
+    }
   }
 }
 
 interface PageUpdatedEvent extends Event {
-  eventId: Nr;
-  eventType: 'PageUpdated';
-  eventData: {
-    pageIdSt: PageId;
-    pageType: St;
-    authorId: PatId;
-    title: St;
-    body: St;
-    bodyFormat: 'CommonMark';
-    // categor ...
+  id: Nr;
+  type: 'PageUpdated';
+  data: {
+    page: {
+      pageIdSt: PageId;
+      pageType: St;
+      authorId: PatId;
+      title: St;
+      body: St;
+      bodyFormat: 'CommonMark';
+      // categor ...
+    }
   }
 }
 
@@ -751,6 +760,36 @@ type ListResultsScrollCursor = Unimplemented;
 //
 // Response ex:
 //
+// {
+//   origin: "https://talkyard.example.com",
+//   thingsFound: [{
+//     id: 1234,  // event id
+//     eventType: 'PageCreated',
+//     eventData: {
+//       page: {   // JsPageFound
+//         title:
+//         urlPath:
+//         categoriesMainFirst: 
+//         author: {
+//           JsParticipantFoundOrNull
+//         },
+//         postsByNr: {
+//           '1': {
+//             body: "Orig post text",
+//             bodyFormat: "CommonMark",
+//           }
+//         }]
+//       },
+//     }
+//   }, {
+//     eventType: 'PagesMoved',    // cmp w the Do API: `doWhat: 'MovePages'`
+//     eventData: {
+//       whichPages: [...],
+//       toCategory: [...],
+//   }]
+// }
+//
+// No!:
 // {
 //   origin: "https://example.com",
 //   thingsFound: [{
@@ -1114,6 +1153,12 @@ interface CreateMetaPostAction extends Action {
 //        whichUser: _,  // reference user above
 //        whichGroup: _,
 //      }
+//    }, {
+//      asWho: 'sysbot',
+//      doWhat: 'MovePages',
+//      doHow: {
+//        whichPages: _,
+//        toCategory: _,
 //    }, {
 //      // Nested — e.g. to run in single transaction. Not implemented (maybe never).
 //      inSingleTransaction: true;

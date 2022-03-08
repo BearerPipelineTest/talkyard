@@ -17,13 +17,19 @@
 
 package com.debiki.core
 
+import com.debiki.core.Prelude._
 
 trait EventType
 
+
+// RENAME to SwEvent or TyEvent? sw = software. But not an IRL (in-real-life) meetup event
+// Or let Event be a software event, and Happening or Meeting or RealEvent or IrlEvent be
+// an in-real-life event?  ... No. "Event" sort of 'always' refers to a webhook / event log
+// event, in software like Ty. But an IRL event could be IrlEvent?
 sealed abstract class Event {
   def id: EventId
   def when: When
-  def eventTypes: ImmSeq[EventType]
+  def eventType: EventType
 }
 
 
@@ -32,7 +38,9 @@ sealed abstract class PageEventType extends EventType
 
 object PageEventType {
   case object PageCreated extends PageEventType
+  case object PageUpdated extends PageEventType
 
+  /*
   case object PageDeleted extends PageEventType
   case object PageUndeleted extends PageEventType
 
@@ -44,15 +52,19 @@ object PageEventType {
 
   case object PageDone extends PageEventType
   //case object PageUnplanned extends PageEventType
+ */
 }
 
 
 case class PageEvent(
   when: When,
-  eventTypes: ImmSeq[PageEventType],
+  eventType: PageEventType,
+  // subTypes: ImmSeq[PageEventSubType],
   underlying: AuditLogEntry) extends Event {
 
   def id: EventId = underlying.id
+
+  def pageId: PageId = underlying.pageId getOrDie s"Page event $id has no page id [TyEEV0PAGEID]"
 }
 
 
@@ -61,19 +73,19 @@ sealed abstract class PostEventType extends EventType
 
 object PostEventType {
   case object PostCreated extends PostEventType
-  case object PostEdited extends PostEventType
-
-  // If it's a reply, not an Orig Post.
-  case object CommentCreated extends PostEventType
+  case object PostUpdated extends PostEventType
 }
 
 
 case class PostEvent(
   when: When,
-  eventTypes: ImmSeq[PostEventType],
+  eventType: PostEventType,
+  //subTypes: ImmSeq[PostEventType],
   underlying: AuditLogEntry) extends Event {
 
   def id: EventId = underlying.id
+
+  def postId: PostId = underlying.uniquePostId getOrDie s"Post event $id has no post id [TyEEV0POSTID]"
 }
 
 
@@ -83,27 +95,38 @@ object Event {
   /** One log line can affect many pages (e.g. moving a comment from one to another)
     * so, returns a list of events.
     */
-  def fromAuditLogItem(logEntry: AuditLogEntry): ImmSeq[Event] = {
+  def fromAuditLogItem(logEntry: AuditLogEntry): Opt[Event] = {
     val when = When.fromDate(logEntry.doneAt)
 
-    val postEventTypes: Vec[PostEventType] = logEntry.didWhat match {
+    val postEventType: Opt[PostEventType] = logEntry.didWhat match {
       case AuditLogEntryType.NewChatMessage | AuditLogEntryType.NewReply =>
-        Vec(PostEventType.PostCreated, PostEventType.CommentCreated)
+        Some(PostEventType.PostCreated)
       case AuditLogEntryType.EditPost =>
-        Vec(PostEventType.PostEdited)
+        Some(PostEventType.PostUpdated)
       case _ =>
-        Vec()
+        None
+    }
+
+    postEventType foreach { t =>
+      return Some(PostEvent(when = when, t, logEntry))
     }
 
     val PET = PageEventType
 
-    val pageEventTypes: Vec[PageEventType] = logEntry.didWhat match {
+    val pageEventType: Opt[PageEventType] = logEntry.didWhat match {
       case AuditLogEntryType.NewPage =>
-        Vec(PET.PageCreated)
+        Some(PET.PageCreated)
 
-      case AuditLogEntryType.PageAnswered =>
-        Vec(PET.PageClosed, PET.PageAnswered)
+      case AuditLogEntryType.PageAnswered
+         | AuditLogEntryType.PageDone
+         | AuditLogEntryType.PageAnswered
+         | AuditLogEntryType.PageClosed
+         | AuditLogEntryType.PageOpened
+         | AuditLogEntryType.DeletePage
+         | AuditLogEntryType.UndeletePage =>
+        Some(PET.PageUpdated)
 
+      /*
       //case AuditLogEntryType.PagePlanned =>
       //case AuditLogEntryType.PageStarted => ???
 
@@ -119,21 +142,30 @@ object Event {
         Vec(PET.PageDeleted)
       case AuditLogEntryType.UndeletePage =>
         Vec(PET.PageUndeleted)
+       */
 
       case _ =>
-        Vec()
+        None
     }
 
+    pageEventType foreach { t =>
+      return Some(PageEvent(when = when, t, logEntry))
+    }
+
+    None
+
+    /*
     val resultBuilder = Vec.newBuilder[Event]
 
-    if (postEventTypes.nonEmpty) {
-      resultBuilder += PostEvent(when = when, postEventTypes, logEntry)
+    if (postEventType.isDefined) {
+      resultBuilder += PostEvent(when = when, postEventType, logEntry)
     }
 
-    if (pageEventTypes.nonEmpty) {
-      resultBuilder += PageEvent(when = when, pageEventTypes, logEntry)
+    if (pageEventType.isDefined) {
+      resultBuilder += PageEvent(when = when, pageEventType, logEntry)
     }
 
     resultBuilder.result
+     */
   }
 }

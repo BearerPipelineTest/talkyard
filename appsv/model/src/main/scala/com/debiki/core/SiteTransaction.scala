@@ -753,7 +753,8 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
         : immutable.Seq[AuditLogEntry]
 
   def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], tyype: Opt[AuditLogEntryType],
-        newerOrAt: Opt[When], olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
+        newerOrAt: Opt[When], newerThanEventId: Opt[EventId],
+        olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
         inclForgotten: Bo): immutable.Seq[AuditLogEntry]
 
   def loadBlocks(ip: String, browserIdCookie: Option[String]): immutable.Seq[Block]

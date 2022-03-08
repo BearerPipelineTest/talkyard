@@ -2833,6 +2833,28 @@ trait PostsDao {
     }
 
 
+  def loadPostsMaySeeByIdNrs(requester: Opt[Pat], postIds: Opt[ImmSeq[PostId]],
+          pagePostNrs: Opt[ImmSeq[PagePostNr]]) : LoadPostsResult = {
+
+      require(postIds.isDefined != pagePostNrs.isDefined, "TyE023MAEJP6")
+
+      if (postIds.forall(_.isEmpty) && pagePostNrs.forall(_.isEmpty))
+        return LoadPostsResult(Nil, Map.empty)
+
+      val postsInclForbidden: ImmSeq[Post] = readTx { tx =>
+        if (postIds.isDefined) {
+          tx.loadPostsByUniqueId(postIds.get).values.to[Vec]
+        }
+        else {
+          tx.loadPostsByNrs(pagePostNrs.get)
+        }
+      }
+
+      filterMaySeeAddPages(
+            requester, postsInclForbidden, inclUnlistedPagePosts = true)
+    }
+
+
   def loadPostsMaySeeByQuery(
           requester: Option[Participant], orderBy: OrderBy, limit: Int,
           inclTitles: Boolean, onlyEmbComments: Boolean, inclUnapprovedPosts: Boolean,
@@ -2842,7 +2864,7 @@ trait PostsDao {
     unimplementedIf(orderBy != OrderBy.MostRecentFirst,
           "Only most recent first supported [TyE403RKTJ]")
 
-    val postsInclForbidden = readOnlyTransaction { tx =>
+    val postsInclForbidden: ImmSeq[Post] = readTx { tx =>
       if (onlyEmbComments) {
         dieIf(inclTitles, "TyE503RKDP5", "Emb cmts have no titles")
         dieIf(inclUnapprovedPosts, "TyE503KUTRT", "Emb cmts + unapproved")
@@ -2863,6 +2885,14 @@ trait PostsDao {
               inclUnlistedPagePosts_unimpl = inclUnlistedPagePosts)
       }
     }
+
+    filterMaySeeAddPages(
+          requester, postsInclForbidden, inclUnlistedPagePosts = inclUnlistedPagePosts)
+  }
+
+
+  private def filterMaySeeAddPages(requester: Opt[Pat], postsInclForbidden: ImmSeq[Post],
+        inclUnlistedPagePosts: Bo): LoadPostsResult = {
 
     val pageIdsInclForbidden = postsInclForbidden.map(_.pageId).toSet
     val pageMetaById = getPageMetasAsMap(pageIdsInclForbidden)

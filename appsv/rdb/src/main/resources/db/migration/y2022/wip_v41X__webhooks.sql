@@ -74,7 +74,7 @@ create table webhooks_t (
 
   sent_up_to_when_c  timestamp,
   sent_up_to_event_id_c  event_id_d,
-  --maybe_pending_min_c  i16_gz_d not null,
+  num_pending_maybe_c  i16_gz_d,
   done_for_now_c  bool,
   retry_event_ids_c  int[], -- not?: event_id_d[],
 

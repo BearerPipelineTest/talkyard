@@ -827,6 +827,7 @@ class SystemDao(
           */
   }
 
+  /*
   private def sendWebhookRequest(toWhere: St, payloadJson: JsObject): Future[U] = {
     val wsClient: WSClient = globals.wsClient
     val jsStr = payloadJson.toString()
@@ -856,7 +857,7 @@ class SystemDao(
           logger.warn(s"Error sending webhook [TyEPWHK2]", ex)
           //Sp5KMRD025amCheckResult.Error(GoogleSafeBrowsingApiDomain)
       })(globals.executionContext)
-  }
+  } */
 
 
   // ----- Testing

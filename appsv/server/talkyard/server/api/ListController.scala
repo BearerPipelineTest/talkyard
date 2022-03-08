@@ -22,7 +22,7 @@ import debiki.RateLimits
 import talkyard.server.http._
 import debiki.EdHttp._
 import Prelude._
-import debiki.dao.{LoadPostsResult, PageStuff, SiteDao}
+import debiki.dao.LoadPostsResult
 import talkyard.server.{TyContext, TyController}
 import javax.inject.Inject
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -147,11 +147,17 @@ class ListController @Inject()(cc: ControllerComponents, edContext: TyContext)
       }
     }
 
+    // Site origin.  Dupl code [603RKDJL5]
+    val siteIdsOrigins = dao.theSiteIdsOrigins()
+    val avatarUrlPrefix =
+          siteIdsOrigins.uploadsOrigin +
+           talkyard.server.UploadsUrlBasePath + siteIdsOrigins.pubId + '/'
+
     lazy val authzCtx = dao.getForumAuthzContext(requester)
 
     listWhat match {
       case Events =>
-        // Maybe break out to own file?
+        // Maybe break out to own fn?  Dao.loadEvents()?  [load_events_fn]
         val events: ImmSeq[Event] = dao.readTx { tx =>
           val limit = limitMax100 getOrElse 33
           val auditLogItems: ImmSeq[AuditLogEntry] =
@@ -159,15 +165,13 @@ class ListController @Inject()(cc: ControllerComponents, edContext: TyContext)
                       limit = limit)
           auditLogItems.flatMap(Event.fromAuditLogItem)
         }
-        def JsEvent(event: Event): JsObject = {
-          ???
-        }
-        val eventsJson = events map JsEvent
-        val siteIdsOrigins = dao.theSiteIdsOrigins()
-        import controllers.OkApiJson
-        OkApiJson(Json.obj(
-          "origin" -> siteIdsOrigins.siteOrigin,
-          "thingsFound" -> eventsJson), pretty)
+        val eventsJson = talkyard.server.parser.EventsParSer.makeEventsListJson(
+              events, dao, reqer = requester, avatarUrlPrefix = avatarUrlPrefix)
+
+        // Typescript: SearchQueryResults, and ListQueryResults
+        controllers.Utils.OkApiJson(Json.obj(
+            "origin" -> siteIdsOrigins.siteOrigin,
+            "thingsFound" -> eventsJson), pretty)
 
       case Pages =>
         val pageQuery = PageQuery(pageSortOrder,

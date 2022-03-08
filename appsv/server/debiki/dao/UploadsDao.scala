@@ -255,6 +255,7 @@ trait UploadsDao {
             userId = Some(uploaderId),
             tyype = Some(AuditLogEntryType.UploadFile),
             newerOrAt = None,
+            newerThanEventId = None,
             olderOrAt = None,
             newestFirst = true,
             limit = MaxUploadsLastWeek,

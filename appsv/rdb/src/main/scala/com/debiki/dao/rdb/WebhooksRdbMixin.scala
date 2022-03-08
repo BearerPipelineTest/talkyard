@@ -146,7 +146,7 @@ trait WebhooksRdbMixin extends SiteTx {
               sent_json_c,
               sent_headers_c,
               send_failed_at_c,
-              send_failed_type_c,
+              send_failed_how_c,
               send_failed_msg_c,
               resp_at_c,
               resp_status_c,
@@ -163,7 +163,7 @@ trait WebhooksRdbMixin extends SiteTx {
               sent_json_c = excluded.sent_json_c,
               sent_headers_c = excluded.sent_headers_c,
               send_failed_at_c = excluded.send_failed_at_c,
-              send_failed_type_c = excluded.send_failed_type_c,
+              send_failed_how_c = excluded.send_failed_how_c,
               send_failed_msg_c = excluded.send_failed_msg_c,
               resp_at_c = excluded.resp_at_c,
               resp_status_c = excluded.resp_status_c,
@@ -183,7 +183,7 @@ trait WebhooksRdbMixin extends SiteTx {
           webhookSent.sentJson, // ?
           webhookSent.sentHeaders, // ? JsObject,
           webhookSent.sendFailedAt.orNullTimestamp,
-          webhookSent.sendFailedType.orNullInt,
+          webhookSent.sendFailedHow.map(_.toInt).orNullInt,
           webhookSent.sendFailedMsg.orNullVarchar,
           webhookSent.respAt.orNullTimestamp,
           webhookSent.respStatus.orNullInt,
@@ -238,7 +238,7 @@ object WebhooksRdb {
           sentHeaders = getJsObject(rs, "sent_headers_c"),
 
           sendFailedAt = getOptWhen(rs, "send_failed_at_c"),
-          sendFailedType = getOptInt32(rs, "send_failed_type_c"),
+          sendFailedHow = SendFailedHow.fromOptInt(getOptInt32(rs, "send_failed_how_c")),
           sendFailedMsg = getOptString(rs, "send_failed_msg_c"),
 
           respAt = getOptWhen(rs, "resp_at_c"),

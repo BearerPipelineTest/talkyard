@@ -60,6 +60,7 @@ trait PagesDao {
     readOnlyTransaction(_.loadPagesByUser(userId, isStaffOrSelf = isStaffOrSelf, limit))
   }
 
+  MOVE // loadMaySeePagesInCategory and listMaySeeTopicsInclPinned to here?  [move_list_pages]
 
   REMOVE; CLEAN_UP // use createPage2 instead, and rename it to createPage().
   def createPage(pageRole: PageType, pageStatus: PageStatus, anyCategoryId: Option[CategoryId],
