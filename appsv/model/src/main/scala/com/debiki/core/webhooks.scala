@@ -36,6 +36,7 @@ case class Webhook(
   sendFormatV: i16,
   sendMaxPerSec: Opt[i16],
   sendBatchSize: i16,
+  sendMaxWaitSecs: i16,
 
   sentUpToWhen: When,
   sentUpToEventId: Opt[i32],
