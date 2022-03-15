@@ -110,6 +110,7 @@ export const StupidDialog = createComponent({
           stuff.secondaryButonTitle)));
 
     const className = 'esStupidDlg ' +
+            (stuff.large ? 'esStupidDlg-Large ' : '') +
             (stuff.small ? 'esStupidDlg-Small ' : '') +
             (stuff.tiny ? 'esStupidDlg-Tiny ' : '') +
             (stuff.dialogClassName || '');

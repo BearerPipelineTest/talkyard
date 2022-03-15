@@ -167,6 +167,11 @@ class RdbSiteTransaction(var siteId: SiteId, val daoFactory: RdbDaoFactory, val 
   }
 
 
+  def makeSqlArrayOfInt32(values: Iterable[i32]): js.Array = {
+    theOneAndOnlyConnection.createArrayOf("int", values.map(_.asAnyRef).toArray[Object])
+  }
+
+
   def runQueryFindNextFreeInt32(tableName: St, columnName: St): i32 = {
     val query = s"""
           select max($columnName) as any_max

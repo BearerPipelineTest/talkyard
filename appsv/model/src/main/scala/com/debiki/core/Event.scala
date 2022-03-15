@@ -19,7 +19,18 @@ package com.debiki.core
 
 import com.debiki.core.Prelude._
 
-trait EventType
+
+sealed abstract class EventType(val IntVal: i32) { def toInt: i32 = IntVal }
+
+object EventType {
+  def fromInt(value: i32): Opt[EventType] = Some(value match {
+    case PageEventType.PageCreated.IntVal => PageEventType.PageCreated
+    case PageEventType.PageUpdated.IntVal => PageEventType.PageUpdated
+    case PostEventType.PostCreated.IntVal => PostEventType.PostCreated
+    case PostEventType.PostUpdated.IntVal => PostEventType.PostUpdated
+    case _ => return None
+  })
+}
 
 
 // RENAME to SwEvent or TyEvent? sw = software. But not an IRL (in-real-life) meetup event
@@ -34,11 +45,11 @@ sealed abstract class Event {
 
 
 
-sealed abstract class PageEventType extends EventType
+sealed abstract class PageEventType(IntVal: i32) extends EventType(IntVal)
 
 object PageEventType {
-  case object PageCreated extends PageEventType
-  case object PageUpdated extends PageEventType
+  case object PageCreated extends PageEventType(1101)
+  case object PageUpdated extends PageEventType(1201)
 
   /*
   case object PageDeleted extends PageEventType
@@ -69,11 +80,11 @@ case class PageEvent(
 
 
 
-sealed abstract class PostEventType extends EventType
+sealed abstract class PostEventType(IntVal: i32) extends EventType(IntVal)
 
 object PostEventType {
-  case object PostCreated extends PostEventType
-  case object PostUpdated extends PostEventType
+  case object PostCreated extends PostEventType(2101)
+  case object PostUpdated extends PostEventType(2201)
 }
 
 
@@ -92,6 +103,26 @@ case class PostEvent(
 
 object Event {
 
+  val RelevantAuditLogEntryTypes: Vec[AuditLogEntryType] = Vec(
+        AuditLogEntryType.NewPage,
+        AuditLogEntryType.DeletePage,
+        AuditLogEntryType.UndeletePage,
+        AuditLogEntryType.PageClosed,
+        AuditLogEntryType.PageOpened,
+        AuditLogEntryType.PageAnswered,
+        AuditLogEntryType.PagePlanned,
+        AuditLogEntryType.PageStarted,
+        AuditLogEntryType.PageDone,
+
+        AuditLogEntryType.NewReply,
+        AuditLogEntryType.NewChatMessage,
+        AuditLogEntryType.EditPost,
+        AuditLogEntryType.ChangePostSettings,
+        // MovePost — hmm, should this be a new webhook event?
+        // Or just a PostUpdated event, and sub type MovePost,
+        // with a new page id and parent post nr?
+        )
+
   /** One log line can affect many pages (e.g. moving a comment from one to another)
     * so, returns a list of events.
     */
@@ -101,7 +132,8 @@ object Event {
     val postEventType: Opt[PostEventType] = logEntry.didWhat match {
       case AuditLogEntryType.NewChatMessage | AuditLogEntryType.NewReply =>
         Some(PostEventType.PostCreated)
-      case AuditLogEntryType.EditPost =>
+      case AuditLogEntryType.EditPost
+         | AuditLogEntryType.ChangePostSettings =>
         Some(PostEventType.PostUpdated)
       case _ =>
         None
@@ -118,8 +150,9 @@ object Event {
         Some(PET.PageCreated)
 
       case AuditLogEntryType.PageAnswered
+         | AuditLogEntryType.PagePlanned
+         | AuditLogEntryType.PageStarted
          | AuditLogEntryType.PageDone
-         | AuditLogEntryType.PageAnswered
          | AuditLogEntryType.PageClosed
          | AuditLogEntryType.PageOpened
          | AuditLogEntryType.DeletePage

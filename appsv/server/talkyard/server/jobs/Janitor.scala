@@ -69,7 +69,7 @@ object Janitor {
 
     globals.actorSystem.scheduler.scheduleWithFixedDelay(
           isOrWasTest ? 2.seconds | 23.seconds,
-          isOrWasTest ? delayIfTest | 2.seconds, actorRef, SendWebhooks)
+          isOrWasTest ? delayIfTest | 3.seconds, actorRef, SendWebhooks)
 
     actorRef
   }

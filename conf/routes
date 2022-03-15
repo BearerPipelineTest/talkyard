@@ -360,8 +360,10 @@ POST  /-/sa/schedule-purge-sites controllers.SuperAdminController.schedulePurgeS
 # ----- API
 
 GET   /-/list-webhooks          talkyard.server.webhooks.WebhooksController.listWebhooks
-POST  /-/upsert-webhook         talkyard.server.webhooks.WebhooksController.upsertWebhook
-POST  /-/delete-webhook         talkyard.server.webhooks.WebhooksController.deleteWebhook
+POST  /-/upsert-webhooks        talkyard.server.webhooks.WebhooksController.upsertWebhooks
+POST  /-/delete-webhooks        talkyard.server.webhooks.WebhooksController.deleteWebhooks
+POST  /-/retry-webhook          talkyard.server.webhooks.WebhooksController.retryWebhook
+GET   /-/list-webhook-reqs-out  talkyard.server.webhooks.WebhooksController.listWebhookReqsOut
 
 GET   /-/list-api-secrets       controllers.ApiSecretsController.listApiSecrets
 POST  /-/create-api-secret      controllers.ApiSecretsController.createApiSecret

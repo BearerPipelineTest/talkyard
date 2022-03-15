@@ -118,6 +118,7 @@ package object core {
   val NoPostNr: PostNr = -1  // COULD change to 0, and set TitleNr = -1  [4WKBA20]
   val TitleNr: PostNr = PageParts.TitleNr
   val BodyNr: PostNr = PageParts.BodyNr
+  val BodyNrSt: St = PageParts.BodyNr.toString
   val FirstReplyNr: PostNr = PageParts.FirstReplyNr
 
   val PostHashPrefixNoHash   = "post-"
@@ -610,6 +611,10 @@ package object core {
 
     def earliestNot0(whenA: When, whenB: When): When =
       if (whenA.millis < whenB.millis && whenA.millis != 0) whenA else whenB
+
+    def earliestNot0(whenA: When, whenB: Opt[When]): When =
+      if (whenB.isEmpty) whenA
+      else earliestNot0(whenA, whenB.get)
 
     def anyEarliestOf(whenA: Option[When], whenB: Option[When]): Option[When] = {
       if (whenA.isDefined && whenB.isDefined)

@@ -24,6 +24,7 @@ import debiki.dao.{LoadPostsResult, PageStuff, SiteDao}
 import play.api.libs.json._
 import play.api.mvc.Result
 import talkyard.server.JsX._
+import talkyard.server.parser.JsonConf
 
 
 
@@ -86,7 +87,7 @@ object PostsListFoundJson {
 
 
   def JsPostListFound(post: Post, pageStuff: PageStuff, ppsById: Map[UserId, Participant],
-          avatarUrlPrefix: String): JsObject = {
+          avatarUrlPrefix: St, jsonConf: JsonConf = JsonConf.v0_0): JsObject = {
 
     val anyAuthor = ppsById.get(post.createdById)
 
@@ -104,7 +105,7 @@ object PostsListFoundJson {
       "isPageBody" -> JsBoolean(post.nr == PageParts.BodyNr),
       // COULD use the page's actual path (folder + slug).
       "urlPath" -> JsString(s"/-${post.pageId}#post-${post.nr}"),
-      "author" -> ThingsFoundJson.JsParticipantFoundOrNull(anyAuthor, avatarUrlPrefix),
+      "author" -> ThingsFoundJson.JsParticipantFoundOrNull(anyAuthor, avatarUrlPrefix, jsonConf),
       "approvedHtmlSanitized" -> JsString(approvedHtmlSanitized))
   }
 

@@ -160,6 +160,29 @@ type FindWhat =
   'Badges';
 
 
+type WhatThing =
+  'Event' |
+  'Page'  |
+  'Post'; /*
+  'Pat' |   // short for "Participant"
+  'Invite' |
+  'EmailOut' |
+  'Tag' |
+  'Category' |
+  'Badge';  */
+
+
+interface Thing {
+  // Not needed, if only one thing type allowed, e.g. a webhook request would
+  // only include Event:s — then, no need for `what: 'Event'`.
+  what?: WhatThing;
+
+  // Can be left out, if looking up one specific thing, by id. Then the caller
+  // already knows its id (e.g. in client/embedded-comments/comments-count.ts).
+  id?: St | Nr;
+}
+
+
 
 // Where to search
 // -------------------------
@@ -262,8 +285,14 @@ interface GroupFound extends MemberFound {
 }
 
 
-interface PageOptFields {
+interface PageOptFields extends Thing {
+  what?: 'Page';
+  id?: PageId;
+
+  // Deprecated:
   pageId?: PageId;
+
+  //type: PageType;
   title?: St;
   // Prefix with the origin (included in the response) to get the full URL.
   urlPath?: St;
@@ -277,7 +306,11 @@ interface PageOptFields {
 
 // Rename to PageDef(ault)Fields ?
 interface PageFoundOrListed extends PageOptFields {
+  id: PageId;
+
+  // Deprecated:
   pageId: PageId;
+
   title: string;
   // Prefix with the origin (included in the response) to get the full URL.
   urlPath: string;
@@ -294,7 +327,8 @@ type PageListed = PageFoundOrListed;
 
 
 
-interface PostFoundOrListed {
+interface PostFoundOrListed extends Thing {
+  what?: 'Post';
   isPageTitle?: boolean;
   isPageBody?: boolean;
   author?: ParticipantFound;
@@ -385,23 +419,27 @@ interface EventDefaultFields__no {
   }
 }
 
+
 type EventType =
     'PageCreated' | 
     'PageUpdated' | 
     'PostCreated' | 
-    'PostUpdated';
-    // ...
+    'PostUpdated'; /*
+    'PatCreated'  |    // subtype: 'User/Group/Guest/AnonCreated' ?
+    'PatUpdated'  |
+    ... */
 
-interface Event {
-  //tt: ThingType.Event;
+
+interface Event_ extends Thing {
+  what?: 'Event';
   id: Nr;
-  eventType: EventType;
-  eventData: Object;
+  type: EventType;
+  //subtypes: EventSubtype[];
+  data: Object;
 }
 
-interface PageCreatedEvent extends Event {
-  //
-  id: Nr;
+
+interface PageCreatedEvent extends Event_ {
   type: 'PageCreated';
   data: {
     page: {
@@ -428,8 +466,7 @@ interface PageCreatedEvent extends Event {
   }
 }
 
-interface PageUpdatedEvent extends Event {
-  id: Nr;
+interface PageUpdatedEvent extends Event_ {
   type: 'PageUpdated';
   data: {
     page: {
@@ -749,10 +786,12 @@ type ListResultsScrollCursor = Unimplemented;
 //
 //   { origin: "https://example.com", thingsFound: [...]  }
 //
+//   // or:  { origin: ..., pages: [...]  }
 //
 // List recent webhook events:
+//  curl --user tyid=2:14xubgffn4w1b3iluvd2uyntzm -X POST -H 'Content-Type: application/json' http://e2e-test-cid-0-0-now-6795.localhost/-/v0/list -d '{ "listQuery": { "listWhat": "Events" }}'
 //
-//  /-/v0/list  {
+//  /-/v0/list  {    // or just  /-/v0/events  ?
 //    listQuery: {
 //      listWhat: 'Events',
 //    }
@@ -761,12 +800,16 @@ type ListResultsScrollCursor = Unimplemented;
 // Response ex:
 //
 // {
+//   jsonVersion: 1,
 //   origin: "https://talkyard.example.com",
-//   thingsFound: [{
+//   thingsFound: [{   //  or  events: ...  and skip 'what: ...'?
+//     what: 'Event',
 //     id: 1234,  // event id
-//     eventType: 'PageCreated',
-//     eventData: {
+//     type: 'PageCreated',
+//     subTypes: [],
+//     data: {
 //       page: {   // JsPageFound
+//         id:
 //         title:
 //         urlPath:
 //         categoriesMainFirst: 
@@ -782,8 +825,10 @@ type ListResultsScrollCursor = Unimplemented;
 //       },
 //     }
 //   }, {
-//     eventType: 'PagesMoved',    // cmp w the Do API: `doWhat: 'MovePages'`
-//     eventData: {
+//     what: 'Event',
+//     id: 567,
+//     type: 'PagesMoved',    // cmp w the Do API: `doWhat: 'MovePages'`
+//     data: {
 //       whichPages: [...],
 //       toCategory: [...],
 //   }]

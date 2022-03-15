@@ -698,6 +698,7 @@ interface StupidDialogStuff {  // RENAME from ...Stuff to ...Options
   closeButtonTitle?: any;
   primaryButtonTitle?: any;
   secondaryButonTitle?: any;
+  large?: Bo;
   small?: boolean;
   tiny?: boolean;
   // number = 1 if primary / okay button clicked, 2 if secondary button clicked, and
@@ -1956,26 +1957,66 @@ type WebhookId = Nr;
 type EventId = Nr;
 type EventType = St;
 
-interface Webhook {
-  webhookId: WebhookId,
 
-  ownerId?: PatId;
+// Sync w Scala:  def JsWebhook(webhook: Webhook).
+//
+interface Webhook {
+  id: WebhookId,
+
+  ownerId: PatId;
   runAsId?: PatId;
 
   enabled?: Bo,
-  broken?: Bo,
   deleted?: Bo,
 
   descr?: St;
-  sendToUrl?: St,
-  sendEventTypes?: EventType[];
-  sendFormatV?: 1;
-  sendMaxPerSec?: Nr;
+  sendToUrl: St;
+  // sendEventTypes
+  // sendEventSubTypes
+  sendFormatV?: Nr;  // RENAME  to  useApiVersion: St ?
+  //sendMaxPerSec?: Nr;
+  sendMaxEventsPerReq?: Nr;
+
+  sendCustomHeaders?: Object;
+  retryMaxSecs?: Nr;
+  retryMaxTimes?: Nr;
+
+  failedHow?: Nr; // WebhookReqFailedHow
+  failedSince?: WhenMs;
+  errMsgOrResp?: St;
+  retriedNumTimes?: Nr;
+  retriedNumMins?: Nr;
+  brokenReason?: Nr;  // WebhookBrokenReason
 
   sentUpToWhen?: WhenMs,
   sentUpToEventId?: EventId;
-  maybePendingMin?: Nr;
-  retryEventIds?: EventId[];
+  numPendingMaybe?: Nr;
+  //retryEventIds?: EventId[];
+  doneForNow?: Bo;
+}
+
+
+// Sync w Scala:  def JsWebhookReqOut(webhook: Webhook).
+//
+interface WebhookReqOut {
+  webhookId: Nr;
+  sentAt: WhenMs;
+  sentToUrl?: St;
+  sentByAppVer: St;  // talkyardVersion
+  sentFormatV: Nr;   // apiVersion
+  sentEventTypes: Nr[];
+  // sentEventSubTypes
+  sentEventIds: Nr[];
+  sentJson: Object;
+  sentHeaders?: Object;
+
+  failedAt?: WhenMs;
+  failedHow?: St;
+  errMsg?: St;
+
+  respAt?: WhenMs;
+  respStatus?: Nr;
+  respBody?: St;
 }
 
 

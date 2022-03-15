@@ -57,6 +57,9 @@ object AuditLogEntryType {
   case object PageStarted  extends AuditLogEntryType(101)
   case object PageDone  extends AuditLogEntryType(101)
 
+  // PageApproved?
+  // ReplyApproved?
+
   // Let 1001-1999 be about people?
   case object CreateUser extends AuditLogEntryType(1001)
   // later ----

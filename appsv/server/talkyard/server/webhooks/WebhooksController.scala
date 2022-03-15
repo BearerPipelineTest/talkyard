@@ -21,56 +21,90 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import talkyard.server.{TyContext, TyController}
 import talkyard.server.http._
+import WebhooksParSer._
+import debiki.JsonUtils.{parseJsArray, parseInt32}
+
 import javax.inject.Inject
 import play.api.libs.json._
 import play.api.mvc._
 
 
-import WebhooksParSer._
 
 class WebhooksController @Inject()(cc: ControllerComponents, tyContext: TyContext)
   extends TyController(cc, tyContext) {
 
 
-  def listWebhooks(): Action[U] = AdminGetAction { request: GetRequest =>
-    listWebhooksImpl(request)
+  def listWebhooks(): Action[U] = AdminGetAction { req: GetRequest =>
+    listWebhooksImpl(req)
   }
 
 
-  private def listWebhooksImpl(request: DebikiRequest[_]): Result = {
-    import request.dao
-    val webhooks = dao.writeTx { (tx, _) =>
-      tx.loadWebhooks()
+  private def listWebhooksImpl(req: DebikiRequest[_]): Result = {
+    import req.dao
+    val webhooks = dao.readTx { tx =>
+      tx.loadAllWebhooks()
     }
     OkSafeJson(Json.obj(
         "webhooks" -> JsArray(webhooks map JsWebhook)))
   }
 
 
-  def upsertWebhook: Action[JsValue] = AdminPostJsonAction(maxBytes = 5000) {
-        request: JsonPostRequest =>
-    import request.{body, dao}
-    val webhook = WebhooksParSer.parseWebhook(body, IfBadAbortReq)
+  def upsertWebhooks: Action[JsValue] = AdminPostJsonAction(maxBytes = 5000) {
+        req: JsonPostRequest =>
+    import req.dao
+    val jsWebhooks: Seq[JsValue] = parseJsArray(req.body, "webhooks")
+    val webhooks: Seq[Webhook] =
+          jsWebhooks.map(jw => WebhooksParSer.parseWebhook(jw, IfBadAbortReq))
     dao.writeTx { (tx, _) =>
-      tx.upsertWebhook(webhook)
+      webhooks foreach tx.upsertWebhook
     }
     OkSafeJson(Json.obj(
-        "webhook" -> JsWebhook(webhook)))
+        "webhooks" -> JsArray(webhooks map JsWebhook)))
   }
 
 
-  def deleteWebhook: Action[JsValue] = AdminPostJsonAction(maxBytes = 5000) {
-        request: JsonPostRequest =>
+  def deleteWebhooks: Action[JsValue] = AdminPostJsonAction(maxBytes = 5000) {
+        req: JsonPostRequest =>
     // Maybe makes sense to allow this, even if API not enabled, so one can still
     // delete old secrets?
-    import request.{dao, body}
-    import debiki.JsonUtils._
+    import req.dao
 
-    val webhookId = parseInt32(body, "webhookId")
+    val jsWebhooks: Seq[JsValue] = parseJsArray(req.body, "webhooks")
+    val webhookIds: Seq[WebhookId] = jsWebhooks.map(jw => parseInt32(jw, "webhookId"))
     dao.writeTx { (tx, _) =>
-      tx.deleteWebhook(webhookId)
+      webhookIds foreach tx.deleteWebhook
     }
-    listWebhooksImpl(request)
+    listWebhooksImpl(req)
   }
+
+
+  def retryWebhook: Action[JsValue] = AdminPostJsonAction(maxBytes = 50) {
+        req: JsonPostRequest =>
+    val webhookId: WebhookId = parseInt32(req.body, "webhookId")
+    req.dao.writeTx { (tx, _) =>
+      val webhook = tx.loadWebhook(webhookId) getOrElse {
+        debiki.EdHttp.throwNotFound("TyE0WBHK028054", s"No webhook with id $webhookId")
+      }
+      val webhookAft = webhook.copy(retryMaxTimes = Some(1))(IfBadAbortReq)
+      tx.upsertWebhook(webhookAft)
+    }
+    Ok
+  }
+
+
+  def listWebhookReqsOut(): Action[U] = AdminGetAction { req: GetRequest =>
+    listWebhookReqsOutImpl(req)
+  }
+
+
+  private def listWebhookReqsOutImpl(req: DebikiRequest[_]): Result = {
+    import req.dao
+    val reqsOut = dao.readTx { tx =>
+      tx.loadWebhookReqsOutRecentFirst(limit = 50)
+    }
+    OkSafeJson(Json.obj(
+        "webhookReqsOut" -> JsArray(reqsOut map JsWebhookReqOut)))
+  }
+
 
 }

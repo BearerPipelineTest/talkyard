@@ -16,19 +16,19 @@ object EventsParSer {
   def makeEventsListJson(events: ImmSeq[Event], dao: SiteDao, reqer: Opt[Pat],
           avatarUrlPrefix: St): ImmSeq[EventAndJson] = {
 
-    val (postsById: Map[PostId, Post],
-          origPostsByPageId: Map[PageId, Post],
-          pagesById: Map[PageId, PageStuff]) = {
+    val (postsById, //: Map[PostId, Post],
+          origPostsByPageId, //: Map[PageId, Post],
+          pagesById) = { //: Map[PageId, PageStuff]) = {
 
       val pagePostNrs: ImmSeq[PagePostNr] = events collect {
         case ev: PageEvent if ev.eventType == PageEventType.PageCreated =>
           PagePostNr(ev.pageId, BodyNr)
       }
 
-      val otherPageIds: ImmSeq[PageId] = events collect {
+      val otherPageIds: MutArrBuf[PageId] = (events collect {
         case ev: PageEvent if ev.eventType != PageEventType.PageCreated =>
           ev.pageId
-      }
+      }).to[MutArrBuf]
 
       val postIds: ImmSeq[PostId] = events collect {
         case ev: PostEvent => ev.postId
@@ -37,6 +37,13 @@ object EventsParSer {
       val postsById = MutHashMap[PostId, Post]()
       val origPostsByPageId = MutHashMap[PageId, Post]()
       val pageStuffById = MutHashMap[PageId, PageStuff]()
+
+      val loadPostsByIdResult: LoadPostsResult = dao.loadPostsMaySeeByIdNrs(
+            reqer, postIds = Some(postIds), pagePostNrs = None)
+      loadPostsByIdResult.posts foreach { p =>
+        postsById += p.id -> p
+        otherPageIds append p.pageId
+      }
 
       val loadPostsByPageNrResult: LoadPostsResult = dao.loadPostsMaySeeByIdNrs(
             reqer, postIds = None, pagePostNrs = Some(pagePostNrs))
@@ -52,10 +59,6 @@ object EventsParSer {
           pageStuffById += pageStuff.pageId -> pageStuff
         }
       })
-
-      val loadPostsByIdResult: LoadPostsResult = dao.loadPostsMaySeeByIdNrs(
-            reqer, postIds = Some(postIds), pagePostNrs = None)
-      loadPostsByIdResult.posts foreach { p => postsById += p.id -> p }
 
       //postsById.appendAll(loadPostsByPageNrResult.posts)
 
@@ -171,7 +174,9 @@ object EventsParSer {
     import talkyard.server.api.PostsListFoundJson.JsPostListFound
 
     val pageFoundStuff = new ThingsFoundJson.PageFoundStuff(
-          pagePath = ???, // PagePathWithId
+          pagePath = pagePathsById.getOrElse(page.pageId, PagePathWithId.fromIdOnly(page.pageId,
+              // Since there's no other path, this is the canonical one?
+              canonical = true)),
           pageStuff = page,
           pageAndSearchHits = None)
 
@@ -180,18 +185,20 @@ object EventsParSer {
         authorIdsByPostId = Map.empty, // only needed for search hits
         authorsById = authorsById,
         avatarUrlPrefix = avatarUrlPrefix,
-        anyCategory = cat)
+        anyCategory = cat,
+        JsonConf.v0_1)
 
     origPost foreach { op =>
-      pageJson += "postsByNr" -> Json.obj(
-            "1" -> JsPostListFound(op, page, authorsById, avatarUrlPrefix = avatarUrlPrefix))
+      val origPostJson = JsPostListFound(
+            op, page, authorsById, avatarUrlPrefix = avatarUrlPrefix, JsonConf.v0_1)
+      pageJson += "postsByNr" -> Json.obj(BodyNrSt -> origPostJson)
     }
 
     Json.obj(
         "id" -> event.id,
         "when" -> JsX.JsWhenMs(event.when),
-        "eventType" -> JsPageEventTypeString_apiv0(event.eventType),
-        "eventData" -> Json.obj(
+        "type" -> JsPageEventTypeString_apiv0(event.eventType),
+        "data" -> Json.obj(
           "page" -> pageJson
         ))
   }
@@ -205,8 +212,8 @@ object EventsParSer {
     Json.obj(
         "id" -> event.id,
         "when" -> JsX.JsWhenMs(event.when),
-        "eventType" -> JsPostEventTypeString_apiv0(event.eventType),
-        "eventData" -> Json.obj(
+        "type" -> JsPostEventTypeString_apiv0(event.eventType),
+        "data" -> Json.obj(
           "post" -> postJson
         ))
   }

@@ -253,7 +253,7 @@ trait UploadsDao {
       val nowMs = transaction.now.millis
       val entries = transaction.loadAuditLogEntriesRecentFirst(
             userId = Some(uploaderId),
-            tyype = Some(AuditLogEntryType.UploadFile),
+            types = Vec(AuditLogEntryType.UploadFile),
             newerOrAt = None,
             newerThanEventId = None,
             olderOrAt = None,

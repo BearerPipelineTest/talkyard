@@ -145,21 +145,22 @@ trait AuditLogSiteDaoMixin extends SiteTransaction {
   def loadEventsFromAuditLog(limit: i32, newerOrAt: Opt[When] = None,
         newerThanEventId: Opt[EventId] = None, olderOrAt: Opt[When] = None)
         : immutable.Seq[AuditLogEntry] = {
-    loadAuditLogEntriesRecentFirst(userId = None, tyype = None,
+    loadAuditLogEntriesRecentFirst(userId = None, Event.RelevantAuditLogEntryTypes,
           newerOrAt = newerOrAt, newerThanEventId = newerThanEventId,
           olderOrAt = olderOrAt, newestFirst = false,
           limit = limit, inclForgotten = true)
   }
 
 
-  def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], tyype: Opt[AuditLogEntryType],
+  def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], types: ImmSeq[AuditLogEntryType],
         newerOrAt: Opt[When], newerThanEventId: Opt[EventId],
         olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
         inclForgotten: Bo): immutable.Seq[AuditLogEntry] = {
+    /*
     tyype foreach { t =>
       dieIf(t == AuditLogEntryType.NewPage, "EdE4WK023X", "Probably wants NewReply too")
       dieIf(t == AuditLogEntryType.NewReply, "EdE3ZCM238", "Probably wants NewPage too")
-    }
+    } */
 
     val values = ArrayBuffer(siteId.asAnyRef)
 
@@ -170,11 +171,9 @@ trait AuditLogSiteDaoMixin extends SiteTransaction {
         "and doer_id = ?"
     }
 
-    val andDidWhatEqType = tyype match {
-      case None => ""
-      case Some(t) =>
-        values.append(t.toInt.asAnyRef)
-        "and did_what = ?"
+    val andDidWhatEqType = if (types.isEmpty) "" else {
+      values.appendAll(types.map(_.toInt.asAnyRef))
+      s"and did_what in (${makeInListFor(types)})"
     }
 
     // Non-anonymized entries have forgotten = 0 (instead of 1, 2)

@@ -752,7 +752,7 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
         newerThanEventId: Opt[EventId] = None, olderOrAt: Opt[When] = None)
         : immutable.Seq[AuditLogEntry]
 
-  def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], tyype: Opt[AuditLogEntryType],
+  def loadAuditLogEntriesRecentFirst(userId: Opt[PatId], types: ImmSeq[AuditLogEntryType],
         newerOrAt: Opt[When], newerThanEventId: Opt[EventId],
         olderOrAt: Opt[When], newestFirst: Bo, limit: i32,
         inclForgotten: Bo): immutable.Seq[AuditLogEntry]
@@ -762,11 +762,13 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def unblockIp(ip: InetAddress): Unit
   def unblockBrowser(browserIdCookie: String): Unit
 
-  def loadWebhooks(): ImmSeq[Webhook]
+  def loadWebhook(id: WebhookId): Opt[Webhook]
+  def loadAllWebhooks(): ImmSeq[Webhook]
   def upsertWebhook(webhook: Webhook): U
   def deleteWebhook(webhookId: WebhookId): U
-  def loadWebhooksSent(): ImmSeq[WebhookSent]
-  def upsertWebhookSent(webhookSent: WebhookSent): U
+  def loadWebhookReqsOutRecentFirst(limit: i32): ImmSeq[WebhookReqOut]
+  def insertWebhookReqOut(reqOut: WebhookReqOut): U
+  def updateWebhookReqOut(reqOut: WebhookReqOut): U
 
   def nextApiSecretNr(): DraftNr
   def insertApiSecret(secret: ApiSecret): Unit

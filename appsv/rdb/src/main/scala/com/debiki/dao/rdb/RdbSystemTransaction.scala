@@ -1055,6 +1055,8 @@ class RdbSystemTransaction(
     // Dupl code [7KUW0ZT2]
     s"""
       delete from audit_log3
+      delete from webhook_reqs_out_t
+      delete from webhooks_t
       delete from index_queue3
       delete from spam_check_queue3
       delete from tags_t

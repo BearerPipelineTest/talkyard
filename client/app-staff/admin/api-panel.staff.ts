@@ -153,45 +153,45 @@ const ApiSecretItem = createComponent({
 interface WebhooksApiPanelProps {
 }
 
-interface Webhook {
-  sendToUrl?: St;
-  enabled?: Bo;
-}
 
 const WebhooksApiPanel = React.createFactory<WebhooksApiPanelProps>(function(props) {
   const [webhooksBef, setWebhooksBef] = React.useState<Webhook[] | N>(null);
   const [webhooksCur, setWebhooksCur] = React.useState<Webhook[] | N>(null);
+  const [message, setMessage] = React.useState<St | N>(null);
+  const [reqsOut, setReqsOut] = React.useState<WebhookReqOut[] | N>(null);
 
   React.useEffect(() => {
-    Server.listWebhooks(whks => {
-      // If there's not yet any webhook, let's make a new one: {}, which the admin
-      // can edit and save.
-      const whks2 = whks.length ? whks : [{ id: 1 }];
+    Server.listWebhooks((whks: Webhook[]) => {
+      // If there's not yet any webhook, let's make a new one, which the admins
+      // can edit and save. It'll get to know about everything that happens
+      // (runs as sysbot).
+      const whks2: Webhook[] = whks.length ? whks : [{
+            id: 1, ownerId: Groups.AdminsId, runAsId: Users.SysbotId, sendToUrl: '' }];
       setWebhooksBef(whks2);
       setWebhooksCur(whks2);
     });
   }, []);
-
-  /*
-  const [url, setUrl] = React.useState({}); // <ValueOk<St>>('');
-  const [enabled, setEnabled] = React.useState<Bo>(false);
-  */
 
   if (webhooksCur === null)
     return r.p({}, "Loading webhooks ...");
 
   const theCurHook = webhooksCur[0];
 
+  const unsavedChanges =  !_.isEqual(webhooksBef, webhooksCur);
+
   function updWebhook(changes: Partial<Webhook>) {
     const curHook = webhooksCur[0];
     const updatedHook = {...curHook, ...changes };
     setWebhooksCur([updatedHook]);   // currently there can be just one webhook
+    setMessage(null);
   }
 
   const urlElm =
       Input({ label: "URL",
+          labelClassName: 'col-xs-2',
           wrapperClassName: 'col-xs-offset-2 col-xs-10',
-          className: 'e_WbhkUrl',
+          className: 'e_WbhkUrl s_A_Api_Wh_Url',
+          value: theCurHook.sendToUrl,
           onChange: (event) => {
               updWebhook({ sendToUrl: event.target.value });
             }
@@ -199,29 +199,149 @@ const WebhooksApiPanel = React.createFactory<WebhooksApiPanelProps>(function(pro
 
   const enabledElm =
       Input({ type: 'checkbox', label: "Enabled",
+          labelClassName: 'col-xs-2',
           wrapperClassName: 'col-xs-offset-2 col-xs-10',
-          className: 'e_SearchFld',
+          className: 'e_WbhkEna s_A_Api_Wh_Ena',
           checked: theCurHook.enabled,
           onChange: () => {
             updWebhook({ enabled: !theCurHook.enabled });
-          },
-          });
+          }});
+
+  const retrySecs =
+      Input({ type: 'number', label: "Retry max seconds",
+          labelClassName: 'col-xs-2',
+          wrapperClassName: 'col-xs-offset-2 col-xs-10',
+          className: 'e_WbhkEna s_A_Api_Wh_RetrSecs',
+          value: theCurHook.retryMaxSecs,
+          onChange: () => {
+            updWebhook({ enabled: !theCurHook.enabled });
+          }});
+
+  const webhookDetailsElm =
+      r.pre({ className: 'col-xs-offset-2 col-xs-10' },
+        JSON.stringify(webhooksCur, undefined, 2));
 
   const saveBtn =
       Button({
-          //disabled = _.deep
+          disabled: !unsavedChanges,
           onClick: () => {
-            Server.upsertWebhook(webhooksCur, () => {});
+            Server.upsertWebhooks(webhooksCur, (webhooks) => {
+              // Skip if unmounted!
+              setWebhooksBef(webhooks);
+              setWebhooksCur(webhooks);
+              setMessage("Saved.");
+            });
           }, }, "Save");
+
+  const retryOnceBtn = !theCurHook.brokenReason || unsavedChanges ? null :
+      Button({
+          onClick: () => {
+            Server.retryBrokenWebhook(webhooksCur, () => {
+              setMessage("Will retry in a few seconds.");
+            });
+          }, }, "Retry once");
+
+  const showLogBtn =
+      Button({
+          onClick: () => {
+            if (reqsOut) {
+              showReqs(reqsOut);
+              return;
+            }
+            Server.listWebhookReqsOut((reqsOut) => {
+              setReqsOut(reqsOut);
+              showReqs(reqsOut);
+            });
+          }, }, "View log");
 
   return rFr({},
       r.h3({}, "Webhooks"),
-      r.p({}, "Currently you can configure one webhook endpoint."),
+      r.p({}, "You can configure only one webhook endpoint, currently. " +
+            "It'll get notified about new and updated/edited pages and comments."),
       urlElm,
       enabledElm,
-      saveBtn,
+      retrySecs,
+      showLogBtn,
+      retryOnceBtn,
+      saveBtn, r.div({}, message),
+      webhookDetailsElm,
       );
 });
+
+
+
+function showReqs(reqsOut: WebhookReqOut[]) {
+  util.openDefaultStupidDialog({
+    large: true,
+    body: WebhookReqsPanel({ reqsOut }),
+  });
+}
+
+
+
+const WebhookReqsPanel = React.createFactory(function(ps: { reqsOut: WebhookReqOut[] }) {
+  const [showOnlyFailed, setShowOnlyFailed] = React.useState<Bo>(false);
+  const reqstToShow = ps.reqsOut;  
+  //!showOnlyFailed ? ps.reqsOut :
+    //    ps.reqsOut.filter((r: WebhookReqOut) => r.failedHow);
+
+  const filterCB =
+      Input({ type: 'checkbox', className: '',
+        label: `Show only failed`,
+        checked: showOnlyFailed, onChange: (event: CheckboxEvent) => {
+          setShowOnlyFailed(event.target.checked);
+        }});
+
+  const onlyFailedClass = showOnlyFailed 
+  return r.div({ className: 'c_WbhkReqs' },
+        r.p({}, r.b({}, "Webhook requests, the last 50:")),
+        filterCB,
+        r.ol({}, reqstToShow.map(reqOut => showOneReq({ reqOut, showOnlyFailed }))));
+});
+
+
+
+function showOneReq(ps: { reqOut: WebhookReqOut, showOnlyFailed: Bo }) {
+  const reqOut = ps.reqOut;
+  const isOk = ps.reqOut.respStatus === 200 || ps.reqOut.respStatus === 201;
+  const listItemClasses = 'c_WbhkReqs_Req c_WbhkReqs_Req' + (isOk ? '-Ok' : '-Err');
+
+  if (ps.showOnlyFailed && (isOk)) {
+    return r.li({ className: listItemClasses }, "Ok.");
+  }
+
+  function infoLine(title, value) {
+    return r.div({}, title, ': ', r.samp({}, value));
+  }
+
+  function boldLine(title, value) {
+    return infoLine(r.b({}, title), value);
+  }
+
+  const failInfo = !reqOut.failedAt ? null : rFr({},
+      boldLine("Failed at", whenMsToIsoDate(reqOut.failedAt)),
+      boldLine("Failed how", reqOut.failedHow),
+      boldLine("Error msg", reqOut.errMsg));
+
+  const respInfo = !reqOut.respAt ? null : rFr({},
+      boldLine("Response at", whenMsToIsoDate(reqOut.respAt)),
+      boldLine("Response status", reqOut.respStatus));
+
+  return r.li({ className: listItemClasses },
+      boldLine("When", whenMsToIsoDate(reqOut.sentAt)),
+      boldLine("To URL", reqOut.sentToUrl),
+      boldLine("App / format version", reqOut.sentByAppVer + ' / ' + reqOut.sentFormatV),
+      boldLine("Event types", JSON.stringify(reqOut.sentEventTypes)),
+      boldLine("Event ids", JSON.stringify(reqOut.sentEventIds)),
+      failInfo,
+      respInfo,
+      r.div({},
+          r.b({}, "Sent JSON out: "),
+          r.pre({}, JSON.stringify(reqOut.sentJson, undefined, 2))),
+      !reqOut.respAt ? r.div({}, "There's no response") :
+          boldLine("Response body back: ", reqOut.respBody),
+      );
+}
 
 
 //------------------------------------------------------------------------------

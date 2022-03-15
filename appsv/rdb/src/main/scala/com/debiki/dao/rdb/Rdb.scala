@@ -49,6 +49,9 @@ object Rdb {
   val NullFloat = Null(js.Types.FLOAT)
   val NullTimestamp = Null(js.Types.TIMESTAMP)
   val NullBytea = Null(js.Types.VARBINARY)
+  val NullArray = Null(js.Types.ARRAY)
+  val NullJson = Null(js.Types.OTHER)
+
 
   /**
    * Pimps `Option[String]` with `orNullVarchar`, which means
@@ -66,8 +69,13 @@ object Rdb {
     def orNullInt64: AnyRef = orNullI64
   }
 
+  implicit class PimpOptionWithNullInt16(opt: Opt[i16]) {
+    def orNullInt16: AnyRef = opt.map(_.asInstanceOf[Integer]).getOrElse(NullSmallInt)
+  }
+
   implicit class PimpOptionWithNullInt(opt: Option[Int]) {
-    def orNullInt: AnyRef = opt.map(_.asInstanceOf[Integer]).getOrElse(NullInt)
+    def orNullInt: AnyRef = opt.map(_.asInstanceOf[Integer]).getOrElse(NullInt)  ; RENAME // to 32
+    def orNullInt32: AnyRef = opt.map(_.asInstanceOf[Integer]).getOrElse(NullInt)
   }
 
   implicit class PimpOptionWithNullByte(opt: Option[Byte]) {
@@ -124,10 +132,9 @@ object Rdb {
     }
   }
 
-  /*
-  implicit class PimpOptionWithNullArray(opt: Option[ ? ]) {
+  implicit class PimpOptionWithNullArray[T](opt: Opt[Array[T]]) {
     def orNullArray: AnyRef = opt.getOrElse(Null(js.Types.ARRAY))
-  }*/
+  }
 
   implicit class PimpStringWithNullIfBlank(string: String) {
     def trimNullVarcharIfBlank: AnyRef = {
@@ -368,11 +375,16 @@ object Rdb {
     Some(javaArray.to[Vector])
   }
 
+  def getArrayOfInt32(rs: js.ResultSet, column: St): ImmSeq[i32] = {
+    getOptArrayOfInt32(rs, column) getOrDie(
+          "TyERSNULLINTARR", s"Column $column is null, should be an int array")
+  }
+
   def getOptArrayOfInt32(rs: js.ResultSet, column: St): Opt[ImmSeq[i32]] = {
     val sqlArray: js.Array = rs.getArray(column)
     if (sqlArray eq null) return None
-    val javaArray = sqlArray.getArray.asInstanceOf[Array[i32]]
-    Some(javaArray.to[Vec])
+    val javaArray = sqlArray.getArray.asInstanceOf[Array[Integer]]
+    Some(javaArray.to[Vec].map(_.toInt))
   }
 
   def isUniqueConstrViolation(sqlException: js.SQLException): Boolean = {

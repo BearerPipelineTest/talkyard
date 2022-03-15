@@ -23,4 +23,18 @@ package object parser {
     override def getMessage: St = message
   }
 
+  // How to serialize things to JSON — different flags, for backw compat.
+  /**
+    *
+    * @param v0_1 — just "id" instead of "pageId" and "ppId".
+    */
+  case class JsonConf(v0_0: Bo = false, v0_1: Bo = false) {
+    def inclOldPageIdField: Bo = v0_0
+    def inclOldPpIdField: Bo = v0_0
+  }
+
+  object JsonConf {
+    val v0_0: JsonConf = JsonConf(v0_0 = true)
+    val v0_1: JsonConf = JsonConf(v0_1 = true)
+  }
 }
